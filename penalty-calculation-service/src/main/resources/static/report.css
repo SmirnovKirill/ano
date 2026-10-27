@@ -1,0 +1,66 @@
+:root {
+  --blue: #bdd7ee;
+  --green: #92d050;
+  --border: #303030;
+}
+
+body { margin: 24px; color: #161616; font: 14px "Times New Roman", serif; }
+h1 { margin: 0 0 24px; text-align: center; font-size: 21px; }
+.contract-number, .submission-dates label, .completion-dates label, .calculation-inputs label { display: grid; gap: 6px; width: 260px; }
+.contract-number { margin-bottom: 20px; }
+.submission-dates, .calculation-inputs { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 20px; padding: 12px; border: 1px solid var(--border); }
+.submission-dates legend, .calculation-inputs legend { padding: 0 6px; }
+.calculation-inputs label { width: 340px; align-content: start; }
+.calculation-inputs small { line-height: 1.4; }
+.completion-dates { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
+.completion-dates[hidden] { display: none; }
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+.tabs button { border-bottom: 0; background: #edf2f6; }
+.tabs [aria-selected="true"] { background: var(--blue); font-weight: bold; box-shadow: inset 0 -3px var(--green); }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; min-width: 900px; table-layout: fixed; border-collapse: collapse; background: var(--blue); }
+th, td { padding: 6px; border: 1px solid var(--border); text-align: center; vertical-align: middle; }
+thead th { padding: 12px 7px; }
+tbody tr { height: 56px; }
+.actual { background: var(--green); }
+input, button { box-sizing: border-box; font: inherit; color: inherit; }
+input { width: 100%; min-width: 0; padding: 7px 2px; border: 1px solid transparent; border-radius: 0; background: transparent; text-align: center; }
+input::placeholder { color: #465769; opacity: 1; }
+input:hover { border-color: #687e8b; }
+input:focus { outline: 2px solid #345e80; outline-offset: -2px; background: #ffffff70; }
+.contract-number input, .submission-dates input, .completion-dates input, .calculation-inputs input { border-color: var(--border); background: var(--blue); }
+.submission-dates label:last-child input,
+.completion-dates label:last-child input { background: var(--green); }
+input[type="checkbox"] { width: 18px; height: 18px; padding: 0; accent-color: #345e80; cursor: pointer; }
+input:invalid { outline: 2px solid #b3261e; outline-offset: -2px; }
+tfoot td { height: 34px; padding: 4px; }
+button { padding: 8px 16px; border: 1px solid var(--border); background: var(--blue); cursor: pointer; }
+button:hover { filter: brightness(.96); }
+button:disabled { opacity: .6; cursor: wait; }
+.add-case { width: 100%; padding: 5px; border: 0; font-weight: bold; }
+.case-hint { margin: 8px 0 0; }
+.actions { display: flex; align-items: center; gap: 16px; margin-top: 20px; }
+output { overflow-wrap: anywhere; }
+#calculation-result { margin-top: 28px; }
+#calculation-result h2 { margin: 0 0 12px; font-size: 20px; }
+#calculation-result h3 { margin: 0 0 12px; font-size: 17px; }
+#calculation-result .penalty-stage { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+#calculation-result .penalty-total { font-size: 18px; font-weight: bold; }
+#calculation-result .penalty-subtotal { font-weight: bold; }
+#calculation-result .overdue-days { line-height: 1.6; overflow-wrap: anywhere; }
+#calculation-result table { min-width: 680px; background: #f4f8fb; }
+#calculation-result th:first-child { width: 24%; }
+#calculation-result td { white-space: pre-line; }
+#calculation-result tfoot { background: var(--green); font-weight: bold; }
+#calculation-result details { margin-top: 16px; }
+#calculation-result summary { margin-bottom: 12px; cursor: pointer; }
+#calculation-loader { padding: 32px; border: 0; background: transparent; text-align: center; }
+#calculation-loader::backdrop { background: #ffffffdc; }
+#calculation-loader img { display: block; object-fit: contain; }
+#loading-text { margin: 28px 0 0; font-size: 18px; }
+
+@media (max-width: 600px) {
+  body { margin: 16px 12px; }
+  h1 { font-size: 19px; }
+  .actions { align-items: flex-start; flex-direction: column; }
+}

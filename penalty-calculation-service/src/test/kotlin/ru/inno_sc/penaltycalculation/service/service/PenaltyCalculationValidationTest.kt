@@ -1,0 +1,156 @@
+package ru.inno_sc.penaltycalculation.service.service
+
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
+import org.springframework.beans.factory.annotation.Autowired
+import ru.inno_sc.penaltycalculation.api.penalty.request.CalculatePenaltyRequestDto
+import ru.inno_sc.penaltycalculation.api.penalty.request.ExtraBudgetReportDto
+import ru.inno_sc.penaltycalculation.api.penalty.request.GrantReportDto
+import ru.inno_sc.penaltycalculation.api.penalty.request.ReportCaseDto
+import ru.inno_sc.penaltycalculation.api.penalty.request.TechnicalReportDto
+import ru.inno_sc.penaltycalculation.service.AbstractTest
+import ru.inno_sc.penaltycalculation.service.config.CommonConfig.Companion.DATE_FORMATTER
+import java.math.BigDecimal
+import java.time.LocalDate
+
+class PenaltyCalculationValidationTest : AbstractTest() {
+    @Autowired
+    private lateinit var service: PenaltyCalculationService
+
+    @Autowired
+    private lateinit var reportRevisionPlannedDateService: ReportRevisionPlannedDateService
+
+    private val calculationDate = LocalDate.parse("28.10.2026", DATE_FORMATTER)
+    private val submitted = LocalDate.parse("05.01.2026", DATE_FORMATTER)
+    private val revised = submitted.plusDays(1)
+    private val case = ReportCaseDto(revised, revised)
+
+    @Test
+    fun `allows same-day events and early submission and completion`() {
+        val result = service.calculate(request())
+
+        assertEquals(calculationDate, result.calculationDate)
+        assertEquals(calculationDate, LocalDate.now(clock))
+        assertEquals(BigDecimal("0.00"), result.totalPenalty)
+        assertEquals(listOf(1), result.revisionsPenalty.grantReport.cases.map { it.caseNumber })
+        assertEquals(listOf(1), result.revisionsPenalty.extraBudgetReport.cases.map { it.caseNumber })
+        assertEquals(listOf(1), result.revisionsPenalty.technicalReport.cases.map { it.caseNumber })
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["grantReport", "extraBudgetReport", "technicalReport"])
+    fun `requires a case for each report`(type: String) {
+        rejects(withReport(type, cases = emptyList()), "хотя бы один кейс")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["grantReport", "extraBudgetReport", "technicalReport"])
+    fun `rejects reversed report events`(type: String) {
+        rejects(withReport(type, cases = listOf(case.copy(returnedForRevisionDate = submitted.minusDays(1)))), "возврат на доработку не может предшествовать")
+        rejects(withReport(type, cases = listOf(case.copy(actualSubmissionDate = submitted))), "подача доработанного отчета не может предшествовать")
+        rejects(withReport(type, cases = listOf(case, case.copy(returnedForRevisionDate = submitted))), "возврат на доработку не может предшествовать")
+        rejects(withReport(type, approved = submitted), "согласование не может предшествовать")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["grantReport", "extraBudgetReport", "technicalReport"])
+    fun `requires the final revision to correct remarks`(type: String) {
+        rejects(withReport(type, cases = listOf(case.copy(remarksCorrected = false))), "не исправлены")
+    }
+
+    @Test
+    fun `allows an unresolved revision followed by a correction on the same day`() {
+        val result = service.calculate(withReport(
+            "technicalReport",
+            cases = listOf(case.copy(remarksCorrected = false), case),
+        ))
+        val technicalCases = result.revisionsPenalty.technicalReport.cases
+
+        assertEquals(listOf(1, 1), technicalCases.map { it.caseNumber })
+        assertEquals(technicalCases.first().plannedSubmissionDate, technicalCases.last().plannedSubmissionDate)
+    }
+
+    @Test
+    fun `rejects future submission and completion dates`() {
+        val request = request()
+        val future = calculationDate.plusDays(1)
+        rejects(request.copy(reportPlannedSubmissionDate = future), "будущ")
+        rejects(request.copy(reportActualSubmissionDate = future), "будущ")
+        rejects(request.copy(technicalReport = request.technicalReport.copy(plannedCompletionDate = future)), "будущ")
+        rejects(request.copy(technicalReport = request.technicalReport.copy(actualCompletionDate = future)), "будущ")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["grantReport", "extraBudgetReport", "technicalReport"])
+    fun `rejects future dates in each report`(type: String) {
+        val future = calculationDate.plusDays(1)
+        rejects(withReport(type, cases = listOf(case.copy(returnedForRevisionDate = future))), "будущ")
+        rejects(withReport(type, cases = listOf(case.copy(actualSubmissionDate = future))), "будущ")
+        rejects(withReport(type, approved = future), "будущ")
+    }
+
+    @Test
+    fun `calculates completion independently of technical report approval`() {
+        val request = request()
+        val result = service.calculate(request.copy(technicalReport = request.technicalReport.copy(actualCompletionDate = revised.plusDays(1))))
+
+        assertEquals(listOf(revised, revised.plusDays(1)), result.stageCompletionPenalty.overdueDays)
+        assertEquals(BigDecimal("93.34"), result.stageCompletionPenalty.penalty)
+    }
+
+    @Test
+    fun `requires a contract and a nonnegative amount`() {
+        rejects(request().copy(contractNumber = " "), "номер договора")
+        rejects(request().copy(stageAmount = BigDecimal("-0.01")), "отрицательной")
+    }
+
+    @Test
+    fun `validates the report revision planned-date request`() {
+        reportRevisionPlannedDateService.getReportRevisionPlannedDate(calculationDate, 1)
+        for (number in listOf(0, -1)) {
+            invalid("положительным") {
+                reportRevisionPlannedDateService.getReportRevisionPlannedDate(revised, number)
+            }
+        }
+        invalid("будущ") {
+            reportRevisionPlannedDateService.getReportRevisionPlannedDate(calculationDate.plusDays(1), 1)
+        }
+    }
+
+    private fun rejects(request: CalculatePenaltyRequestDto, message: String) {
+        invalid(message) { service.calculate(request) }
+    }
+
+    private fun invalid(message: String, action: () -> Unit) {
+        val error = assertThrows(IllegalArgumentException::class.java) { action() }
+        assertTrue(error.message.orEmpty().contains(message), error.message)
+    }
+
+    private fun request() = CalculatePenaltyRequestDto(
+        contractNumber = "Г-0001",
+        stageAmount = BigDecimal("100000"),
+        reportPlannedSubmissionDate = revised,
+        reportActualSubmissionDate = submitted,
+        grantReport = GrantReportDto(listOf(case), revised),
+        extraBudgetReport = ExtraBudgetReportDto(listOf(case), revised),
+        technicalReport = TechnicalReportDto(listOf(case), revised, submitted, submitted.minusDays(1)),
+    )
+
+    private fun withReport(
+        type: String,
+        cases: List<ReportCaseDto> = listOf(case),
+        approved: LocalDate = revised,
+    ): CalculatePenaltyRequestDto {
+        val request = request()
+        return when (type) {
+            "grantReport" -> request.copy(grantReport = GrantReportDto(cases, approved))
+            "extraBudgetReport" -> request.copy(extraBudgetReport = ExtraBudgetReportDto(cases, approved))
+            "technicalReport" -> request.copy(technicalReport = request.technicalReport.copy(cases = cases, reportApprovalDate = approved))
+            else -> error("Unknown report: $type")
+        }
+    }
+}

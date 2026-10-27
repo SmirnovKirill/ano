@@ -1,0 +1,19 @@
+{
+  "name": "penalty-calculation-service",
+  "productName": "Расчет неустойки по этапу",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Расчет неустойки по этапу",
+  "author": "АНО «Центр поддержки инжиниринга и инноваций»",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=22.12.0" },
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "start": "node desktop/prepare.mjs && electron .",
+    "dist:win": "node desktop/prepare.mjs && electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "45.1.0",
+    "electron-builder": "26.18.0"
+  }
+}

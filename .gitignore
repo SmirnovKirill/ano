@@ -4,3 +4,5 @@ build/
 .idea/
 *.iml
 .env
+node_modules/
+dist/

@@ -1,23 +1,12 @@
 plugins {
-    kotlin("jvm") version "2.2.21"
-    kotlin("plugin.spring") version "2.2.21"
-    id("org.springframework.boot") version "4.0.9"
-    id("io.spring.dependency-management") version "1.1.7"
+    kotlin("jvm") version "2.2.21" apply false
+    kotlin("plugin.spring") version "2.2.21" apply false
+    id("org.springframework.boot") version "4.0.9" apply false
+    id("io.spring.dependency-management") version "1.1.7" apply false
 }
 
-group = "example"
-version = "0.0.1-SNAPSHOT"
-
-repositories { mavenCentral() }
-kotlin { jvmToolchain(21) }
-
-dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-webmvc")
-    implementation("tools.jackson.module:jackson-module-kotlin")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+allprojects {
+    group = "ru.inno_sc"
+    version = "0.1.1"
+    repositories { mavenCentral() }
 }
-
-tasks.test { useJUnitPlatform() }
-tasks.bootJar { archiveFileName.set("app.jar") }

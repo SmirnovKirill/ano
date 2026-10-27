@@ -1,0 +1,2 @@
+npm ci --include=dev
+npm run dist:win

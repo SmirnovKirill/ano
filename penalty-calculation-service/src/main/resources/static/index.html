@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Расчет неустойки по этапу</title>
+  <link rel="stylesheet" href="/report.css">
+  <script src="/report.js" defer></script>
+  <script src="/test-data.js" defer></script>
+</head>
+<body>
+<main>
+  <h1>Расчет неустойки по этапу</h1>
+  <form id="reports-form" novalidate>
+  <label class="contract-number">Номер договора
+    <input id="contract-number" name="contractNumber" placeholder="Г-0036" required>
+  </label>
+  <fieldset class="calculation-inputs">
+    <legend>Данные для расчёта неустойки</legend>
+    <label>Сумма этапа, ₽
+      <input name="stageAmount" type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" placeholder="50000000.00" required>
+    </label>
+  </fieldset>
+  <fieldset class="submission-dates">
+    <legend>Дата подачи отчетности</legend>
+    <label>Плановая
+      <input name="reportPlannedSubmissionDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" required>
+    </label>
+    <label>Фактическая (поданы все три отчёта)
+      <input name="reportActualSubmissionDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" required>
+    </label>
+  </fieldset>
+  <div class="tabs" role="tablist" aria-label="Виды отчетов">
+    <button id="tab-grant" type="button" role="tab" data-report="grant" aria-selected="true" aria-controls="report-form">Грант</button>
+    <button id="tab-extra-budget" type="button" role="tab" data-report="extraBudget" aria-selected="false" aria-controls="extra-budget-report-form" tabindex="-1">Внебюджет</button>
+    <button id="tab-technical" type="button" role="tab" data-report="technical" aria-selected="false" aria-controls="technical-report-form" tabindex="-1">Тех</button>
+  </div>
+  <div id="report-panels">
+  <section id="report-form" role="tabpanel" aria-labelledby="tab-grant">
+    <div class="table-scroll" role="region" aria-label="Данные отчета" tabindex="0">
+      <table>
+        <colgroup>
+          <col style="width: 10%"><col style="width: 18%"><col style="width: 18%">
+          <col style="width: 18%"><col style="width: 16%"><col style="width: 20%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th colspan="5" scope="colgroup">Отработка замечаний</th>
+            <th id="approval-date" rowspan="3" scope="col">Фактическая дата согласования отчета</th>
+          </tr>
+          <tr>
+            <th rowspan="2" scope="col">номер кейса</th>
+            <th id="returned-date" rowspan="2" scope="col">дата возврата на доработку</th>
+            <th colspan="2" scope="colgroup">дата подачи доработанного отчета</th>
+            <th id="remarks-corrected" rowspan="2" scope="col">Замечания исправлены</th>
+          </tr>
+          <tr>
+            <th scope="col">плановая</th>
+            <th id="revision-actual" scope="col">фактическая</th>
+          </tr>
+        </thead>
+        <tbody id="case-rows">
+          <tr>
+            <th class="case-cell case-number" scope="row"><input data-field="number" type="number" min="1" step="1" value="1" aria-label="Номер кейса" readonly></th>
+            <td class="case-cell actual"><input data-field="returnedForRevisionDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-labelledby="returned-date" required></td>
+            <td class="case-cell" data-planned-date title="Плановая дата рассчитывается по дате возврата и номеру кейса">— Заполнится после ввода даты возврата на доработку.</td>
+            <td class="case-cell actual"><input data-field="actualSubmissionDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-labelledby="revision-actual" required></td>
+            <td class="case-cell actual"><input data-field="remarksCorrected" type="checkbox" aria-labelledby="remarks-corrected" checked></td>
+            <td class="shared actual"><input name="reportApprovalDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-labelledby="approval-date" required></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5"><button id="add-case" class="add-case" type="button">+ Добавить кейс</button></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="case-hint">Номер следующего кейса увеличивается после исправления замечаний. При повторной доработке номер сохраняется.</p>
+    <div class="completion-dates" hidden>
+      <label>Плановая дата завершения работ
+        <input name="plannedCompletionDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" required>
+      </label>
+      <label>Фактическая дата завершения работ
+        <input name="actualCompletionDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" required>
+      </label>
+    </div>
+  </section>
+  </div>
+    <div class="actions">
+      <button id="submit-report" type="submit">Рассчитать</button>
+      <output id="result" role="status" aria-live="polite"></output>
+    </div>
+  </form>
+  <section id="calculation-result" aria-live="polite" hidden></section>
+  <dialog id="calculation-loader" aria-labelledby="loading-text">
+    <img src="/manya.gif" alt="Маня Понич таращит глаза" width="180" height="180">
+    <p id="loading-text">Считаем…</p>
+  </dialog>
+</main>
+</body>
+</html>

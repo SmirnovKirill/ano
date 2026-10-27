@@ -1,0 +1,45 @@
+package ru.inno_sc.penaltycalculation.service.validation
+
+import ru.inno_sc.penaltycalculation.api.penalty.request.CalculatePenaltyRequestDto
+import ru.inno_sc.penaltycalculation.api.penalty.request.ReportCaseDto
+import java.time.LocalDate
+
+class PenaltyCalculationValidator {
+    fun validate(request: CalculatePenaltyRequestDto, calculationDate: LocalDate) {
+        require(request.contractNumber.isNotBlank()) { "Укажите номер договора." }
+        require(request.stageAmount.signum() >= 0) { "Сумма этапа не может быть отрицательной." }
+        validateDateNotFuture(request.reportPlannedSubmissionDate, "Плановая дата подачи отчётности", calculationDate)
+        validateDateNotFuture(request.reportActualSubmissionDate, "Фактическая дата подачи отчётности", calculationDate)
+
+        val technical = request.technicalReport
+        validateReport("Грант", request.grantReport.cases, request.grantReport.reportApprovalDate, request.reportActualSubmissionDate, calculationDate)
+        validateReport("Внебюджет", request.extraBudgetReport.cases, request.extraBudgetReport.reportApprovalDate, request.reportActualSubmissionDate, calculationDate)
+
+        validateReport("Тех", technical.cases, technical.reportApprovalDate, request.reportActualSubmissionDate, calculationDate)
+        validateDateNotFuture(technical.plannedCompletionDate, "Плановая дата завершения работ", calculationDate)
+        validateDateNotFuture(technical.actualCompletionDate, "Фактическая дата завершения работ", calculationDate)
+    }
+
+    private fun validateReport(name: String, cases: List<ReportCaseDto>, reportApprovalDate: LocalDate, submitted: LocalDate, calculationDate: LocalDate) {
+        require(cases.isNotEmpty()) { "$name: добавьте хотя бы один кейс." }
+        var previous = submitted
+        cases.forEachIndexed { index, case ->
+            val label = "$name, строка ${index + 1}"
+            validateDateNotFuture(case.returnedForRevisionDate, "$label: дата возврата на доработку", calculationDate)
+            validateDateNotFuture(case.actualSubmissionDate, "$label: дата подачи доработанного отчёта", calculationDate)
+
+            require(!case.returnedForRevisionDate.isBefore(previous)) { "$label: возврат на доработку не может предшествовать предыдущей подаче." }
+            require(!case.actualSubmissionDate.isBefore(case.returnedForRevisionDate)) { "$label: подача доработанного отчета не может предшествовать возврату на доработку." }
+            previous = case.actualSubmissionDate
+        }
+        validateDateNotFuture(reportApprovalDate, "$name: дата согласования отчёта", calculationDate)
+        require(!reportApprovalDate.isBefore(previous)) { "$name: согласование не может предшествовать последней подаче отчёта." }
+        require(cases.last().remarksCorrected) {
+            "$name: замечания последнего кейса не исправлены. Добавьте повторную доработку."
+        }
+    }
+
+    private fun validateDateNotFuture(date: LocalDate, label: String, calculationDate: LocalDate) {
+        require(!date.isAfter(calculationDate)) { "$label: дата не может быть в будущем." }
+    }
+}
