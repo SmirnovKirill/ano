@@ -69,13 +69,13 @@ class PenaltyCalculationServiceTest : AbstractTest() {
         assertEquals(reports.stageAmount, result.stageAmount)
         assertEquals(BigDecimal("14.00"), result.keyRatePercent)
         assertStage(
-            result.initialSubmissionPenalty.overdueDays,
+            result.initialSubmissionPenalty.daysForCalculation,
             result.initialSubmissionPenalty.penalty,
             penalty = "46666.67",
             expectedDays = listOf(date("24.12.2025"), date("25.12.2025")),
         )
         assertStage(
-            result.revisionsPenalty.overdueDays,
+            result.revisionsPenalty.daysForCalculation,
             result.revisionsPenalty.totalPenalty,
             penalty = "490000.00",
             expectedDays = listOf(
@@ -91,7 +91,7 @@ class PenaltyCalculationServiceTest : AbstractTest() {
         assertStage(
             result.stageCompletionPenalty.overdueDays,
             result.stageCompletionPenalty.penalty,
-            penalty = "443333.34",
+            penalty = "420000.00",
             expectedDays = listOf(
                 date("23.12.2025"), date("24.12.2025"),
                 date("25.12.2025"), date("26.12.2025"), date("27.12.2025"),
@@ -99,18 +99,18 @@ class PenaltyCalculationServiceTest : AbstractTest() {
                 date("31.12.2025"), date("01.01.2026"), date("02.01.2026"),
                 date("03.01.2026"), date("04.01.2026"), date("05.01.2026"),
                 date("06.01.2026"), date("07.01.2026"), date("08.01.2026"),
-                date("09.01.2026"), date("10.01.2026"),
+                date("09.01.2026"),
             ),
         )
-        assertEquals(BigDecimal("980000.01"), result.totalPenalty)
+        assertEquals(BigDecimal("956666.67"), result.totalPenalty)
 
         assertEquals(
             listOf(date("12.03.2026"), date("18.03.2026")),
-            result.revisionsPenalty.grantReport.overdueDays,
+            result.revisionsPenalty.grantReport.daysForCalculation,
         )
         assertEquals(
             listOf(date("12.03.2026"), date("18.03.2026"), date("19.03.2026")),
-            result.revisionsPenalty.extraBudgetReport.overdueDays,
+            result.revisionsPenalty.extraBudgetReport.daysForCalculation,
         )
         assertEquals(
             listOf(
@@ -122,7 +122,7 @@ class PenaltyCalculationServiceTest : AbstractTest() {
                 date("13.02.2026"), date("14.02.2026"), date("15.02.2026"), date("16.02.2026"),
                 date("12.03.2026"),
             ),
-            result.revisionsPenalty.technicalReport.overdueDays,
+            result.revisionsPenalty.technicalReport.daysForCalculation,
         )
 
         assertCases(
@@ -154,13 +154,15 @@ class PenaltyCalculationServiceTest : AbstractTest() {
 
         val result = service.calculateInitialSubmissionPenalty(request, keyRatePercent)
 
-        assertEquals(listOf(date("24.12.2025"), date("25.12.2025")), result.overdueDays)
+        assertEquals(listOf(date("24.12.2025"), date("25.12.2025")), result.daysForCalculation)
+        assertEquals(result.daysForCalculation, result.overdueDays)
+        assertEquals(emptyList<LocalDate>(), result.daysToExcludeManually)
         assertEquals(BigDecimal("46666.67"), result.penalty)
         val onTime = service.calculateInitialSubmissionPenalty(request.copy(reportActualSubmissionDate = date("23.12.2025")), keyRatePercent)
-        assertEquals(emptyList<LocalDate>(), onTime.overdueDays)
+        assertEquals(emptyList<LocalDate>(), onTime.daysForCalculation)
         assertEquals(BigDecimal("0.00"), onTime.penalty)
         val early = service.calculateInitialSubmissionPenalty(request.copy(reportActualSubmissionDate = date("22.12.2025")), keyRatePercent)
-        assertEquals(emptyList<LocalDate>(), early.overdueDays)
+        assertEquals(emptyList<LocalDate>(), early.daysForCalculation)
         assertEquals(BigDecimal("0.00"), early.penalty)
     }
 
@@ -175,13 +177,23 @@ class PenaltyCalculationServiceTest : AbstractTest() {
 
         assertEquals(listOf(
             date("06.03.2026"), date("07.03.2026"), date("08.03.2026"), date("09.03.2026"),
-        ), result.grantReport.overdueDays)
-        assertEquals(listOf(date("06.03.2026")), result.extraBudgetReport.overdueDays)
-        assertEquals(emptyList<LocalDate>(), result.technicalReport.overdueDays)
+        ), result.grantReport.daysForCalculation)
+        assertEquals(listOf(date("06.03.2026")), result.extraBudgetReport.daysForCalculation)
+        assertEquals(emptyList<LocalDate>(), result.technicalReport.daysForCalculation)
         assertEquals(listOf(
             date("06.03.2026"), date("07.03.2026"), date("08.03.2026"), date("09.03.2026"),
-        ), result.overdueDays)
+        ), result.daysForCalculation)
         assertEquals(BigDecimal("93333.34"), result.totalPenalty)
+        assertEquals(result.daysForCalculation, result.overdueDays)
+        assertEquals(emptyList<LocalDate>(), result.daysToExcludeManually)
+        for (report in listOf(result.grantReport, result.extraBudgetReport, result.technicalReport)) {
+            assertEquals(report.daysForCalculation, report.overdueDays)
+            assertEquals(emptyList<LocalDate>(), report.daysToExcludeManually)
+            for (case in report.cases) {
+                assertEquals(case.daysForCalculation, case.overdueDays)
+                assertEquals(emptyList<LocalDate>(), case.daysToExcludeManually)
+            }
+        }
     }
 
     @Test
@@ -194,10 +206,10 @@ class PenaltyCalculationServiceTest : AbstractTest() {
             technicalReport = request.technicalReport.copy(cases = listOf(case("03.03.2026", "07.03.2026"))),
         ), keyRatePercent)
 
-        assertEquals(listOf(date("11.03.2026")), result.grantReport.overdueDays)
-        assertEquals(listOf(date("06.03.2026")), result.extraBudgetReport.overdueDays)
-        assertEquals(listOf(date("07.03.2026")), result.technicalReport.overdueDays)
-        assertEquals(listOf(date("06.03.2026"), date("07.03.2026"), date("11.03.2026")), result.overdueDays)
+        assertEquals(listOf(date("11.03.2026")), result.grantReport.daysForCalculation)
+        assertEquals(listOf(date("06.03.2026")), result.extraBudgetReport.daysForCalculation)
+        assertEquals(listOf(date("07.03.2026")), result.technicalReport.daysForCalculation)
+        assertEquals(listOf(date("06.03.2026"), date("07.03.2026"), date("11.03.2026")), result.daysForCalculation)
         assertEquals(BigDecimal("0.02"), result.totalPenalty)
     }
 
@@ -211,10 +223,10 @@ class PenaltyCalculationServiceTest : AbstractTest() {
         ), keyRatePercent)
 
         for (report in listOf(result.grantReport, result.extraBudgetReport, result.technicalReport)) {
-            assertEquals(emptyList<LocalDate>(), report.overdueDays)
+            assertEquals(emptyList<LocalDate>(), report.daysForCalculation)
             assertEquals(emptyList<ReportRevisionCase>(), report.cases)
         }
-        assertEquals(emptyList<LocalDate>(), result.overdueDays)
+        assertEquals(emptyList<LocalDate>(), result.daysForCalculation)
         assertEquals(BigDecimal("0.00"), result.totalPenalty)
     }
 
@@ -233,9 +245,9 @@ class PenaltyCalculationServiceTest : AbstractTest() {
             date("31.12.2025"), date("01.01.2026"), date("02.01.2026"),
             date("03.01.2026"), date("04.01.2026"), date("05.01.2026"),
             date("06.01.2026"), date("07.01.2026"), date("08.01.2026"),
-            date("09.01.2026"), date("10.01.2026"),
+            date("09.01.2026"),
         ), result.overdueDays)
-        assertEquals(BigDecimal("443333.34"), result.penalty)
+        assertEquals(BigDecimal("420000.00"), result.penalty)
     }
 
     @Test
@@ -251,18 +263,18 @@ class PenaltyCalculationServiceTest : AbstractTest() {
 
         assertEquals(listOf(1, 1, 1), grant.cases.map { it.caseNumber })
         assertEquals(listOf(date("05.03.2026"), date("05.03.2026"), date("05.03.2026")), grant.cases.map { it.plannedSubmissionDate })
-        assertEquals(emptyList<LocalDate>(), grant.cases[0].overdueDays)
-        assertEquals(listOf(date("06.03.2026")), grant.cases[1].overdueDays)
+        assertEquals(emptyList<LocalDate>(), grant.cases[0].daysForCalculation)
+        assertEquals(listOf(date("06.03.2026")), grant.cases[1].daysForCalculation)
         assertEquals(listOf(
             date("06.03.2026"), date("07.03.2026"), date("08.03.2026"),
             date("09.03.2026"), date("10.03.2026"),
-        ), grant.cases[2].overdueDays)
+        ), grant.cases[2].daysForCalculation)
         assertEquals(listOf(
             date("06.03.2026"), date("07.03.2026"), date("08.03.2026"),
             date("09.03.2026"), date("10.03.2026"),
-        ), grant.overdueDays)
+        ), grant.daysForCalculation)
         assertEquals(BigDecimal("116666.67"), result.totalPenalty)
-        assertEquals(grant.overdueDays, result.overdueDays)
+        assertEquals(grant.daysForCalculation, result.daysForCalculation)
     }
 
     @Test
@@ -274,9 +286,9 @@ class PenaltyCalculationServiceTest : AbstractTest() {
 
         val result = service.calculateAllReportsRevisionPenalty(request, keyRatePercent)
 
-        assertEquals(listOf(date("06.03.2026")), result.grantReport.overdueDays)
-        assertEquals(emptyList<LocalDate>(), result.extraBudgetReport.overdueDays)
-        assertEquals(listOf(date("06.03.2026")), result.overdueDays)
+        assertEquals(listOf(date("06.03.2026")), result.grantReport.daysForCalculation)
+        assertEquals(emptyList<LocalDate>(), result.extraBudgetReport.daysForCalculation)
+        assertEquals(listOf(date("06.03.2026")), result.daysForCalculation)
         assertEquals(BigDecimal("23333.34"), result.totalPenalty)
     }
 
@@ -289,20 +301,20 @@ class PenaltyCalculationServiceTest : AbstractTest() {
             reportActualSubmissionDate = date("05.03.2026"),
             grantReport = GrantReportDto(listOf(case), date("13.03.2026")),
             extraBudgetReport = ExtraBudgetReportDto(listOf(case), date("13.03.2026")),
-            technicalReport = TechnicalReportDto(listOf(case), date("13.03.2026"), date("03.03.2026"), date("04.03.2026")),
+            technicalReport = TechnicalReportDto(listOf(case), date("13.03.2026"), date("02.03.2026"), date("04.03.2026")),
         )
 
         val result = service.calculate(request)
 
         assertEquals(date("28.10.2026"), result.calculationDate)
         assertEquals(keyRatePercent, result.keyRatePercent)
-        assertEquals(listOf(date("05.03.2026")), result.initialSubmissionPenalty.overdueDays)
-        assertEquals(listOf(date("13.03.2026")), result.revisionsPenalty.overdueDays)
-        assertEquals(listOf(date("04.03.2026")), result.stageCompletionPenalty.overdueDays)
+        assertEquals(listOf(date("05.03.2026")), result.initialSubmissionPenalty.daysForCalculation)
+        assertEquals(listOf(date("13.03.2026")), result.revisionsPenalty.daysForCalculation)
+        assertEquals(listOf(date("03.03.2026")), result.stageCompletionPenalty.overdueDays)
         assertEquals(List(3) { listOf(date("13.03.2026")) }, listOf(
-            result.revisionsPenalty.grantReport.overdueDays,
-            result.revisionsPenalty.extraBudgetReport.overdueDays,
-            result.revisionsPenalty.technicalReport.overdueDays,
+            result.revisionsPenalty.grantReport.daysForCalculation,
+            result.revisionsPenalty.extraBudgetReport.daysForCalculation,
+            result.revisionsPenalty.technicalReport.daysForCalculation,
         ))
         assertEquals(listOf(BigDecimal("0.01"), BigDecimal("0.01"), BigDecimal("0.01")), listOf(
             result.initialSubmissionPenalty.penalty,
@@ -313,7 +325,7 @@ class PenaltyCalculationServiceTest : AbstractTest() {
     }
 
     @Test
-    fun `all penalty kinds exclude planned date and include actual date`() {
+    fun `submission and revisions include actual date while work completion excludes it`() {
         val request = request()
         val result = service.calculate(request.copy(
             reportPlannedSubmissionDate = date("31.12.2025"),
@@ -325,14 +337,14 @@ class PenaltyCalculationServiceTest : AbstractTest() {
             ),
         ))
 
-        assertEquals(listOf(date("01.01.2026")), result.initialSubmissionPenalty.overdueDays)
-        assertEquals(listOf(date("06.03.2026")), result.revisionsPenalty.grantReport.overdueDays)
-        assertEquals(listOf(date("06.03.2026")), result.revisionsPenalty.grantReport.cases.single().overdueDays)
-        assertEquals(emptyList<LocalDate>(), result.revisionsPenalty.extraBudgetReport.overdueDays)
-        assertEquals(emptyList<LocalDate>(), result.revisionsPenalty.technicalReport.overdueDays)
+        assertEquals(listOf(date("01.01.2026")), result.initialSubmissionPenalty.daysForCalculation)
+        assertEquals(listOf(date("06.03.2026")), result.revisionsPenalty.grantReport.daysForCalculation)
+        assertEquals(listOf(date("06.03.2026")), result.revisionsPenalty.grantReport.cases.single().daysForCalculation)
+        assertEquals(emptyList<LocalDate>(), result.revisionsPenalty.extraBudgetReport.daysForCalculation)
+        assertEquals(emptyList<LocalDate>(), result.revisionsPenalty.technicalReport.daysForCalculation)
         assertEquals(listOf(
             date("01.01.2026"), date("02.01.2026"), date("03.01.2026"),
-            date("04.01.2026"), date("05.01.2026"),
+            date("04.01.2026"),
         ), result.stageCompletionPenalty.overdueDays)
     }
 
@@ -353,10 +365,10 @@ class PenaltyCalculationServiceTest : AbstractTest() {
         assertEquals(input.size, calculated.size)
         assertEquals(caseNumbers, calculated.map { it.caseNumber })
         assertEquals(plannedDates, calculated.map { it.plannedSubmissionDate })
-        for ((original, result) in input.zip(calculated)) {
-            assertEquals(original.returnedForRevisionDate, result.returnedForRevisionDate)
-            assertEquals(original.actualSubmissionDate, result.actualSubmissionDate)
-            assertEquals(original.remarksCorrected, result.remarksCorrected)
+        for ((days, result) in input.zip(calculated)) {
+            assertEquals(days.returnedForRevisionDate, result.returnedForRevisionDate)
+            assertEquals(days.actualSubmissionDate, result.actualSubmissionDate)
+            assertEquals(days.remarksCorrected, result.remarksCorrected)
         }
     }
 

@@ -6,7 +6,9 @@ import java.time.LocalDate
 
 class PenaltyCalculationValidator {
     fun validate(request: CalculatePenaltyRequestDto, calculationDate: LocalDate) {
-        require(request.contractNumber.isNotBlank()) { "Укажите номер договора." }
+        require(request.contractNumber.matches(Regex("Г-00(0[1-9]|[1-7][0-9]|80)"))) {
+            "Укажите номер договора от Г-0001 до Г-0080."
+        }
         require(request.stageAmount.signum() >= 0) { "Сумма этапа не может быть отрицательной." }
         validateDateNotFuture(request.reportPlannedSubmissionDate, "Плановая дата подачи отчётности", calculationDate)
         validateDateNotFuture(request.reportActualSubmissionDate, "Фактическая дата подачи отчётности", calculationDate)

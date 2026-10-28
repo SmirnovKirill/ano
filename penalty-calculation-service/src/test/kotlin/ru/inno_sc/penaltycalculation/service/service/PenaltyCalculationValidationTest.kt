@@ -98,14 +98,26 @@ class PenaltyCalculationValidationTest : AbstractTest() {
         val request = request()
         val result = service.calculate(request.copy(technicalReport = request.technicalReport.copy(actualCompletionDate = revised.plusDays(1))))
 
-        assertEquals(listOf(revised, revised.plusDays(1)), result.stageCompletionPenalty.overdueDays)
-        assertEquals(BigDecimal("93.34"), result.stageCompletionPenalty.penalty)
+        assertEquals(listOf(revised), result.stageCompletionPenalty.overdueDays)
+        assertEquals(BigDecimal("46.67"), result.stageCompletionPenalty.penalty)
     }
 
     @Test
     fun `requires a contract and a nonnegative amount`() {
         rejects(request().copy(contractNumber = " "), "номер договора")
         rejects(request().copy(stageAmount = BigDecimal("-0.01")), "отрицательной")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Г-0001", "Г-0009", "Г-0010", "Г-0079", "Г-0080"])
+    fun `accepts contract numbers from 01 through 80`(number: String) {
+        assertEquals(number, service.calculate(request().copy(contractNumber = number)).contractNumber)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Г-0000", "Г-0081", "Г-0099", "Г-001", "Г-00001", "Г-0101", "G-0001", "Г0001", " Г-0001"])
+    fun `rejects contract numbers outside the fixed format and range`(number: String) {
+        rejects(request().copy(contractNumber = number), "номер договора")
     }
 
     @Test

@@ -13,12 +13,12 @@
   <h1>Расчет неустойки по этапу</h1>
   <form id="reports-form" novalidate>
   <label class="contract-number">Номер договора
-    <input id="contract-number" name="contractNumber" placeholder="Г-0036" required>
+    <span class="contract-input"><span>Г-00</span><input id="contract-number" name="contractNumber" inputmode="numeric" pattern="(0[1-9]|[1-7][0-9]|80)" maxlength="2" placeholder="01–80" aria-label="Номер договора от 01 до 80" required></span>
   </label>
   <fieldset class="calculation-inputs">
     <legend>Данные для расчёта неустойки</legend>
     <label>Сумма этапа, ₽
-      <input name="stageAmount" type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" placeholder="50000000.00" required>
+      <input name="stageAmount" type="text" inputmode="decimal" placeholder="50 000 000.00" required>
     </label>
   </fieldset>
   <fieldset class="submission-dates">
@@ -61,10 +61,10 @@
         </thead>
         <tbody id="case-rows">
           <tr>
-            <th class="case-cell case-number" scope="row"><input data-field="number" type="number" min="1" step="1" value="1" aria-label="Номер кейса" readonly></th>
+            <th class="case-cell case-number" scope="row"><input data-field="number" type="number" min="1" step="1" value="1" aria-label="Номер кейса" readonly><button class="remove-case" type="button" aria-label="Удалить строку кейса">Удалить</button></th>
             <td class="case-cell actual"><input data-field="returnedForRevisionDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-labelledby="returned-date" required></td>
             <td class="case-cell" data-planned-date title="Плановая дата рассчитывается по дате возврата и номеру кейса">— Заполнится после ввода даты возврата на доработку.</td>
-            <td class="case-cell actual"><input data-field="actualSubmissionDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-labelledby="revision-actual" required></td>
+            <td class="case-cell actual"><input data-field="actualSubmissionDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-labelledby="revision-actual" required><small class="overdue-note" hidden></small></td>
             <td class="case-cell actual"><input data-field="remarksCorrected" type="checkbox" aria-labelledby="remarks-corrected" checked></td>
             <td class="shared actual"><input name="reportApprovalDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-labelledby="approval-date" required></td>
           </tr>
@@ -88,8 +88,21 @@
     </div>
   </section>
   </div>
+  <fieldset class="excluded-dates">
+    <legend>Даты, исключаемые из расчёта</legend>
+    <p>Указанные даты не будут учитываться в расчетах по отчетам, по этапам работ - будут.</p>
+    <div id="excluded-date-rows"></div>
+    <button id="add-excluded-date" type="button">+ Добавить дату</button>
+  </fieldset>
+  <template id="excluded-date-template">
+    <div class="excluded-date-row">
+      <input data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-label="Исключаемая дата">
+      <button class="remove-excluded-date" type="button" aria-label="Удалить исключаемую дату">Удалить</button>
+    </div>
+  </template>
     <div class="actions">
       <button id="submit-report" type="submit">Рассчитать</button>
+      <button id="reset-form" type="reset">Очистить форму</button>
       <output id="result" role="status" aria-live="polite"></output>
     </div>
   </form>

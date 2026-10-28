@@ -2,6 +2,7 @@ package ru.inno_sc.penaltycalculation.service.converter
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import ru.inno_sc.penaltycalculation.service.AbstractTest
 import ru.inno_sc.penaltycalculation.service.domain.AllReportsRevisionPenalty
 import ru.inno_sc.penaltycalculation.service.domain.InitialSubmissionPenalty
@@ -10,10 +11,14 @@ import ru.inno_sc.penaltycalculation.service.domain.ReportRevisionCase
 import ru.inno_sc.penaltycalculation.service.domain.SingleReportRevisionPenalty
 import ru.inno_sc.penaltycalculation.service.domain.StageCompletionPenalty
 import ru.inno_sc.penaltycalculation.service.config.CommonConfig.Companion.DATE_FORMATTER
+import tools.jackson.databind.json.JsonMapper
 import java.math.BigDecimal
 import java.time.LocalDate
 
 class PenaltyCalculationResultConverterTest : AbstractTest() {
+    @Autowired
+    private lateinit var mapper: JsonMapper
+
     @Test
     fun `renders revision penalty calculated from unique overdue days across reports`() {
         val report = SingleReportRevisionPenalty(listOf(date("05.03.2026")), emptyList())
@@ -22,13 +27,16 @@ class PenaltyCalculationResultConverterTest : AbstractTest() {
 
         assertEquals("28.10.2026", dto.calculationDate)
         assertEquals("14%", dto.keyRatePercent)
-        assertEquals("05.03.2026", dto.revisionsPenalty.overdueDays)
+        assertEquals("05.03.2026", dto.revisionsPenalty.daysForCalculation)
         assertEquals("23\u00a0333,34\u00a0₽", dto.totalPenalty)
         assertEquals("Уникальных дней просрочки: 1. Неустойка: 23\u00a0333,34\u00a0₽.", dto.revisionsPenalty.summary)
         assertEquals("50\u00a0000\u00a0000,00\u00a0₽ × 14 / 100 × 1 / 300 = 23\u00a0333,34\u00a0₽", dto.revisionsPenalty.formula)
         assertEquals("0,00\u00a0₽ + 23\u00a0333,34\u00a0₽ + 0,00\u00a0₽ = 23\u00a0333,34\u00a0₽", dto.totalFormula)
         assertEquals(1, dto.revisionsPenalty.grantReport.overdueDaysCount)
         assertEquals(1, dto.revisionsPenalty.extraBudgetReport.overdueDaysCount)
+        assertEquals(1, dto.revisionsPenalty.overdueDaysCount)
+        assertEquals(0, dto.initialSubmissionPenalty.overdueDaysCount)
+        assertEquals(0, dto.stageCompletionPenalty.overdueDaysCount)
         assertEquals("Неустойка по доработке рассчитывается по уникальным дням просрочки всех трёх отчётов. Если одна дата встречается в нескольких отчётах, она учитывается один раз.", dto.revisionsPenalty.explanation)
     }
 
@@ -45,14 +53,14 @@ class PenaltyCalculationResultConverterTest : AbstractTest() {
 
         assertEquals(listOf(1, 1), cases.map { it.caseNumber })
         assertEquals(listOf("05.03.2026", "05.03.2026"), cases.map { it.plannedSubmissionDate })
-        assertEquals(listOf("Не исправлены — срок сохраняется", "Исправлены"), cases.map { it.remarks })
+        assertEquals(listOf("Возобновляется фиксация нарушения срока.", "Исправлены"), cases.map { it.remarks })
         assertEquals("02.03.2026", cases.first().returnedForRevisionDate)
         assertEquals("09.03.2026", cases.last().actualSubmissionDate)
-        assertEquals("06.03.2026, 07.03.2026, 08.03.2026, 09.03.2026", cases.last().overdueDays)
+        assertEquals("06.03.2026, 07.03.2026, 08.03.2026, 09.03.2026", cases.last().daysForCalculation)
         assertEquals(4, dto.revisionsPenalty.grantReport.overdueDaysCount)
-        assertEquals("Нет просрочки", dto.revisionsPenalty.extraBudgetReport.overdueDays)
+        assertEquals("Нет просрочки", dto.revisionsPenalty.extraBudgetReport.daysForCalculation)
         assertEquals(0, dto.revisionsPenalty.extraBudgetReport.overdueDaysCount)
-        assertEquals("Нет просрочки", dto.initialSubmissionPenalty.overdueDays)
+        assertEquals("Нет просрочки", dto.initialSubmissionPenalty.daysForCalculation)
     }
 
     @Test

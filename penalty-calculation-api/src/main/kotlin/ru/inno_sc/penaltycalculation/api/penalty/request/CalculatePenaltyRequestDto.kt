@@ -11,4 +11,5 @@ data class CalculatePenaltyRequestDto(
     val grantReport: GrantReportDto,
     val extraBudgetReport: ExtraBudgetReportDto,
     val technicalReport: TechnicalReportDto,
+    val daysToExcludeManually: List<LocalDate> = emptyList(),
 )

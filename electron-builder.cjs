@@ -6,6 +6,7 @@ module.exports = {
   files: ['desktop/*.cjs'],
   win: {
     target: 'zip',
+    artifactName: 'penalty_calculation_service_${version}_win.${ext}',
     executableName: `${name}-${version}`,
     extraResources: [
       { from: 'build/desktop/win32-x64' },

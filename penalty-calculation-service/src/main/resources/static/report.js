@@ -6,6 +6,8 @@ const expensesTitle = heading.textContent;
 const contractNumber = document.querySelector('#contract-number');
 const submissionDates = document.querySelector('.submission-dates');
 const calculationInputs = document.querySelector('.calculation-inputs');
+const stageAmount = calculationInputs.querySelector('[name="stageAmount"]');
+const excludedDateRows = document.querySelector('#excluded-date-rows');
 const result = document.querySelector('#result');
 const calculationResult = document.querySelector('#calculation-result');
 const submit = document.querySelector('#submit-report');
@@ -65,6 +67,20 @@ document.querySelector('.tabs').addEventListener('keydown', event => {
 });
 
 reportForm.addEventListener('input', ({ target }) => {
+  if (target === contractNumber) target.value = target.value.replace(/\D/g, '').slice(0, 2);
+  if (target === stageAmount) {
+    const value = target.value.replace(/\s/g, '');
+    if (/^\d*(?:[.,]\d{0,2})?$/.test(value)) {
+      let remaining = target.value.slice(0, target.selectionStart).replace(/\s/g, '').length;
+      target.value = value.replace(/^\d+/, digits => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' '));
+      let caret = 0;
+      while (remaining > 0 && caret < target.value.length) {
+        if (target.value[caret] !== ' ') remaining--;
+        caret++;
+      }
+      target.setSelectionRange(caret, caret);
+    }
+  }
   if (target.matches('[data-date]')) {
     const beforeCaret = target.value.slice(0, target.selectionStart).replace(/\D/g, '').length;
     target.value = target.value.replace(/\D/g, '').slice(0, 8)
@@ -86,6 +102,27 @@ reportForm.addEventListener('change', ({ target }) => {
   validateForm();
 });
 
+document.querySelector('#add-excluded-date').addEventListener('click', () => {
+  excludedDateRows.append(document.querySelector('#excluded-date-template').content.cloneNode(true));
+  excludedDateRows.lastElementChild.querySelector('input').focus();
+});
+excludedDateRows.addEventListener('click', ({ target }) => {
+  if (!target.matches('.remove-excluded-date')) return;
+  target.closest('.excluded-date-row').remove();
+  validateForm();
+});
+
+function clearCaseRow(row) {
+  row.querySelectorAll('.case-cell input').forEach(input => {
+    if (input.type === 'checkbox') input.checked = true;
+    else input.value = '';
+    input.setCustomValidity('');
+  });
+  const planned = row.querySelector('[data-planned-date]');
+  planned.calculationRequest = null;
+  planned.textContent = plannedDateHint;
+}
+
 panels.forEach(panel => {
   const completionDates = panel.querySelector('.completion-dates');
   if (panel.dataset.report === 'technical') completionDates.hidden = false;
@@ -96,11 +133,7 @@ panels.forEach(panel => {
   panel.querySelector('.add-case').addEventListener('click', () => {
     const row = rows.insertRow();
     rows.rows[0].querySelectorAll('.case-cell').forEach(cell => row.append(cell.cloneNode(true)));
-    row.querySelector('[data-planned-date]').textContent = plannedDateHint;
-    row.querySelectorAll('input').forEach(input => {
-      if (input.type === 'checkbox') input.checked = true;
-      else input.value = '';
-    });
+    clearCaseRow(row);
     updateCaseNumbers(panel);
     updatePanelPlannedDates(panel);
     rows.querySelectorAll('.shared').forEach(cell => cell.rowSpan = rows.rows.length);
@@ -108,11 +141,49 @@ panels.forEach(panel => {
     row.querySelector('[data-date]').focus();
   });
 
+  rows.addEventListener('click', ({ target }) => {
+    if (!target.matches('.remove-case')) return;
+    const row = target.closest('tr');
+    row.querySelector('[data-planned-date]').calculationRequest = null;
+    if (rows.rows.length === 1) clearCaseRow(row);
+    else {
+      const shared = row.querySelector('.shared');
+      if (shared) rows.rows[1].append(shared);
+      row.remove();
+    }
+    rows.querySelector('.shared').rowSpan = rows.rows.length;
+    updateCaseNumbers(panel);
+    updatePanelPlannedDates(panel);
+    validateForm();
+  });
+});
+
+reportForm.addEventListener('reset', event => {
+  event.preventDefault();
+  reportForm.querySelectorAll('[data-planned-date]').forEach(cell => cell.calculationRequest = null);
+  panels.forEach(panel => {
+    const rows = panel.querySelector('tbody');
+    [...rows.rows].slice(1).forEach(row => row.remove());
+    clearCaseRow(rows.rows[0]);
+    rows.querySelector('.shared').rowSpan = 1;
+    updateCaseNumbers(panel);
+  });
+  reportForm.querySelectorAll('input').forEach(input => {
+    if (input.type !== 'checkbox' && !input.readOnly) input.value = '';
+    input.setCustomValidity('');
+  });
+  excludedDateRows.replaceChildren();
+  result.textContent = '';
+  calculationResult.replaceChildren();
+  calculationResult.hidden = true;
+  tabs[0].click();
+  updateOverdueWarnings();
 });
 
 function validateForm() {
-  contractNumber.setCustomValidity(contractNumber.value.trim() ? '' : 'Укажите номер договора.');
-  reportForm.querySelectorAll('[data-date]').forEach(input => input.setCustomValidity(dateError(input.value)));
+  contractNumber.setCustomValidity(/^(0[1-9]|[1-7][0-9]|80)$/.test(contractNumber.value) ? '' : 'Введите номер от 01 до 80.');
+  stageAmount.setCustomValidity(/^\d+([.,]\d{1,2})?$/.test(stageAmount.value.replace(/\s/g, '')) ? '' : 'Укажите сумму с точностью до двух знаков после запятой.');
+  reportForm.querySelectorAll('[data-date]').forEach(input => input.setCustomValidity(input.required || input.value ? dateError(input.value) : ''));
   reportForm.querySelectorAll('[data-field="remarksCorrected"]').forEach(input => input.setCustomValidity(''));
   const submitted = submissionDates.querySelector('[name="reportActualSubmissionDate"]');
   const notBefore = (input, previous, message) => {
@@ -134,6 +205,32 @@ function validateForm() {
     const corrected = panel.querySelector('tbody').lastElementChild.querySelector('[data-field="remarksCorrected"]');
     corrected.setCustomValidity(corrected.checked ? '' : 'Исправьте замечания последнего кейса или добавьте повторную доработку.');
   }
+  updateOverdueWarnings();
+}
+
+function updateOverdueWarnings() {
+  const calendarDay = date => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const daysToExcludeManually = new Set([...excludedDateRows.querySelectorAll('input')]
+    .map(input => parseDate(input.value)).filter(Boolean).map(calendarDay));
+  reportForm.querySelectorAll('[data-field="actualSubmissionDate"]').forEach(input => {
+    const planned = parseDate(input.closest('tr').querySelector('[data-planned-date]').textContent);
+    const actual = parseDate(input.value);
+    let days = 0;
+    if (planned && actual && input.validity.valid) {
+      const start = calendarDay(planned);
+      const end = calendarDay(actual);
+      days = (end - start) / 86400000;
+      days -= [...daysToExcludeManually].filter(day => day > start && day <= end).length;
+    }
+    const cell = input.closest('td');
+    const note = cell.querySelector('.overdue-note');
+    const message = days > 30 ? `Просрочка: ${days} дн. (более 30).` : '';
+    cell.classList.toggle('overdue-warning', days > 30);
+    note.textContent = message;
+    note.hidden = !message;
+    if (message) input.setAttribute('aria-description', message);
+    else input.removeAttribute('aria-description');
+  });
 }
 
 function updateCaseNumbers(panel) {
@@ -158,6 +255,7 @@ async function updatePlannedDate(input) {
     .find(candidate => Number(candidate.querySelector('[data-field="number"]').value) === caseNumber);
   const value = firstRow?.querySelector('[data-field="returnedForRevisionDate"]').value;
   cell.textContent = plannedDateHint;
+  updateOverdueWarnings();
   if (!Number.isInteger(caseNumber) || caseNumber < 1 || !value || dateError(value)) return;
   cell.textContent = '…';
   result.textContent = '';
@@ -166,7 +264,10 @@ async function updatePlannedDate(input) {
     const response = await fetch(`/api/reports/revision-planned-date?${params}`);
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || 'Не удалось рассчитать дату. Проверьте наличие календаря для выбранного года.');
-    if (cell.calculationRequest === request) cell.textContent = data.plannedSubmissionDate;
+    if (cell.calculationRequest === request) {
+      cell.textContent = data.plannedSubmissionDate;
+      updateOverdueWarnings();
+    }
   } catch (error) {
     if (cell.calculationRequest === request) {
       cell.textContent = 'Ошибка';
@@ -217,6 +318,14 @@ function appendTable(parent, label, headings, rows) {
   parent.append(scroll);
 }
 
+function overdueDaySteps(item) {
+  return [
+    `Исходные дни (${item.overdueDays.length}): ${item.overdueDays.join(', ') || 'нет'}.`,
+    `Исключены вручную (${item.daysToExcludeManually.length}): ${item.daysToExcludeManually.join(', ') || 'нет'}.`,
+    `Остались для расчёта: ${item.daysForCalculation}.`,
+  ];
+}
+
 function renderCalculation(data) {
   calculationResult.replaceChildren();
   calculationResult.append(
@@ -229,27 +338,37 @@ function renderCalculation(data) {
   [data.initialSubmissionPenalty, data.revisionsPenalty, data.stageCompletionPenalty].forEach(stage => {
     const section = document.createElement('section');
     section.className = 'penalty-stage';
+    section.append(textElement('h3', stage.title));
+    if (stage === data.revisionsPenalty) {
+      const reports = [stage.grantReport, stage.extraBudgetReport, stage.technicalReport];
+      appendTable(section, 'Доработка каждого отчёта', ['Отчёт', 'Расчёт дней просрочки', 'Дни'],
+        reports.map(report => [report.name, overdueDaySteps(report).join('\n'), report.overdueDaysCount]));
+    }
+    if (stage !== data.stageCompletionPenalty) {
+      const steps = document.createElement('ol');
+      steps.className = 'exclusion-steps';
+      overdueDaySteps(stage).forEach(step => steps.append(textElement('li', step)));
+      section.append(steps);
+    } else {
+      section.append(textElement('p', `Конкретные дни: ${stage.overdueDays}`, 'overdue-days'));
+    }
     section.append(
-      textElement('h3', stage.title),
       textElement('p', stage.summary, 'penalty-subtotal'),
-      textElement('p', `Конкретные дни: ${stage.overdueDays}`, 'overdue-days'),
       textElement('p', stage.formula, 'penalty-formula'),
     );
     if (stage === data.revisionsPenalty) {
       const reports = [stage.grantReport, stage.extraBudgetReport, stage.technicalReport];
-      appendTable(section, 'Доработка каждого отчёта', ['Отчёт', 'Конкретные дни просрочки', 'Дни'],
-        reports.map(report => [report.name, report.overdueDays, report.overdueDaysCount]));
       section.append(textElement('p', stage.explanation));
       const details = document.createElement('details');
       details.append(
         textElement('summary', 'Проверить сроки и исправление замечаний по кейсам'),
         textElement('p', stage.caseExplanation),
       );
-      appendTable(details, 'Сроки доработки по кейсам', ['Отчёт', 'Кейс', 'Возврат', 'Плановая подача', 'Фактическая подача', 'Замечания', 'Просрочка'],
+      appendTable(details, 'Сроки доработки по кейсам', ['Отчёт', 'Кейс', 'Возврат', 'Плановая подача', 'Фактическая подача', 'Замечания', 'Расчёт просрочки'],
         reports.flatMap(report => report.cases.map(item => [
           report.name, item.caseNumber, item.returnedForRevisionDate,
           item.plannedSubmissionDate, item.actualSubmissionDate,
-          item.remarks, item.overdueDays,
+          item.remarks, overdueDaySteps(item).join('\n'),
         ])));
       section.append(details);
     }
@@ -271,8 +390,9 @@ reportForm.addEventListener('submit', async event => {
     return;
   }
   const data = {
-    contractNumber: contractNumber.value,
-    ...Object.fromEntries([...calculationInputs.querySelectorAll('[name]')].map(input => [input.name, input.value])),
+    contractNumber: `Г-00${contractNumber.value}`,
+    stageAmount: stageAmount.value.replace(/\s/g, '').replace(',', '.'),
+    daysToExcludeManually: [...excludedDateRows.querySelectorAll('input')].map(input => input.value).filter(Boolean),
     ...Object.fromEntries([...submissionDates.querySelectorAll('[name]')].map(input => [input.name, input.value])),
   };
   panels.forEach(panel => data[`${panel.dataset.report}Report`] = reportData(panel));

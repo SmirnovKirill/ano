@@ -1,5 +1,7 @@
 package ru.inno_sc.penaltycalculation.api.penalty.response
 
+import java.time.LocalDate
+
 data class PenaltyCalculationResultDto(
     val contractNumber: String,
     val stageAmount: String,
@@ -15,7 +17,10 @@ data class PenaltyCalculationResultDto(
 )
 
 data class InitialSubmissionPenaltyDto(
-    val overdueDays: String,
+    val daysForCalculation: String,
+    val overdueDays: List<LocalDate>,
+    val daysToExcludeManually: List<LocalDate>,
+    val overdueDaysCount: Int,
     val title: String,
     val summary: String,
     val formula: String,
@@ -25,7 +30,10 @@ data class AllReportsRevisionPenaltyDto(
     val grantReport: SingleReportRevisionPenaltyDto,
     val extraBudgetReport: SingleReportRevisionPenaltyDto,
     val technicalReport: SingleReportRevisionPenaltyDto,
-    val overdueDays: String,
+    val daysForCalculation: String,
+    val overdueDays: List<LocalDate>,
+    val daysToExcludeManually: List<LocalDate>,
+    val overdueDaysCount: Int,
     val title: String,
     val summary: String,
     val formula: String,
@@ -34,7 +42,9 @@ data class AllReportsRevisionPenaltyDto(
 )
 
 data class SingleReportRevisionPenaltyDto(
-    val overdueDays: String,
+    val daysForCalculation: String,
+    val overdueDays: List<LocalDate>,
+    val daysToExcludeManually: List<LocalDate>,
     val cases: List<ReportRevisionCaseDto>,
     val name: String,
     val overdueDaysCount: Int,
@@ -46,11 +56,14 @@ data class ReportRevisionCaseDto(
     val plannedSubmissionDate: String,
     val actualSubmissionDate: String,
     val remarks: String,
-    val overdueDays: String,
+    val daysForCalculation: String,
+    val overdueDays: List<LocalDate>,
+    val daysToExcludeManually: List<LocalDate>,
 )
 
 data class StageCompletionPenaltyDto(
     val overdueDays: String,
+    val overdueDaysCount: Int,
     val title: String,
     val summary: String,
     val formula: String,
