@@ -55,6 +55,7 @@ async function start() {
 
   const size = screen.getPrimaryDisplay().workAreaSize;
   window = new BrowserWindow({
+    icon: path.join(__dirname, 'app-icon.png'),
     title: app.getName(), width: Math.min(1440, size.width), height: Math.min(900, size.height),
     minWidth: 800, minHeight: 600, show: false,
   });
