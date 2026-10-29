@@ -1,38 +1,42 @@
 // Преобразование полей формы в объект запроса и обратно.
 function reportData(panel) {
-  const data = Object.fromEntries([...panel.querySelectorAll('[name][data-date]')].filter(input => input.value).map(input => [input.name, input.value]));
-  data.cases = [...panel.querySelector('tbody').rows].filter(row => row.dataset.requestCase ||
-    [...row.querySelectorAll('[data-date]')].some(input => input.value) || !row.querySelector('[data-field="remarksCorrected"]').checked)
-    .map(row => ({
-      ...Object.fromEntries([...row.querySelectorAll('[data-field][data-date]')].filter(input => input.value).map(input => [input.dataset.field, input.value])),
-      remarksCorrected: row.querySelector('[data-field="remarksCorrected"]').checked,
-    }));
+  const data = { reportApprovalDate: panel.querySelector('[name="reportApprovalDate"]').value };
+  if (panel.dataset.report === 'technical') {
+    data.plannedCompletionDate = panel.querySelector('[name="plannedCompletionDate"]').value;
+    data.actualCompletionDate = panel.querySelector('[name="actualCompletionDate"]').value;
+  }
+  data.cases = [...panel.querySelector('tbody').rows].map(row => ({
+    returnedForRevisionDate: row.querySelector('[data-field="returnedForRevisionDate"]').value,
+    actualSubmissionDate: row.querySelector('[data-field="actualSubmissionDate"]').value,
+    remarksCorrected: row.querySelector('[data-field="remarksCorrected"]').checked,
+  }));
   return data;
 }
 
 function getRequestData() {
-  const data = {
+  return {
     calculationDate: calculationDate.value,
-    ...(contractNumber.value ? { contractNumber: `Г-00${contractNumber.value}` } : {}),
-    ...(stageAmount.value ? { stageAmount: stageAmount.value.replace(/\s/g, '').replace(',', '.') } : {}),
-    ...Object.fromEntries([...submissionDates.querySelectorAll('[name]')].filter(input => input.value).map(input => [input.name, input.value])),
+    contractNumber: `Г-00${contractNumber.value}`,
+    stageNumber: stageNumber.value ? Number(stageNumber.value) : null,
+    stageAmount: stageAmount.value.replace(/\s/g, '').replace(',', '.'),
+    reportPlannedSubmissionDate: submissionDates.querySelector('[name="reportPlannedSubmissionDate"]').value,
+    reportActualSubmissionDate: submissionDates.querySelector('[name="reportActualSubmissionDate"]').value,
+    grantReport: reportData(panels[0]),
+    extraBudgetReport: reportData(panels[1]),
+    technicalReport: reportData(panels[2]),
+    daysToExcludeManually: [...excludedDateRows.querySelectorAll('input')].map(input => input.value),
   };
-  panels.forEach(panel => {
-    const report = reportData(panel);
-    if (panel.dataset.requestReport || report.cases.length || Object.keys(report).length > 1) data[`${panel.dataset.report}Report`] = report;
-  });
-  data.daysToExcludeManually = [...excludedDateRows.querySelectorAll('input')].map(input => input.value).filter(Boolean);
-  return data;
 }
 
 function checkRequestData(data) {
   const reports = ['grantReport', 'extraBudgetReport', 'technicalReport'];
-  checkObjectFields(data, 'Запрос', ['calculationDate', 'contractNumber', 'stageAmount', 'reportPlannedSubmissionDate', 'reportActualSubmissionDate', 'daysToExcludeManually', ...reports]);
+  checkObjectFields(data, 'Запрос', ['calculationDate', 'contractNumber', 'stageNumber', 'stageAmount', 'reportPlannedSubmissionDate', 'reportActualSubmissionDate', 'daysToExcludeManually', ...reports]);
   checkDateFields(data, 'Запрос', ['calculationDate', 'reportPlannedSubmissionDate', 'reportActualSubmissionDate']);
   if ('contractNumber' in data && (typeof data.contractNumber !== 'string' || !/^Г-00\d{0,2}$/.test(data.contractNumber))) throw Error('contractNumber: ожидается номер с префиксом Г-00 и двумя цифрами.');
+  if ('stageNumber' in data && data.stageNumber !== null && (!Number.isInteger(data.stageNumber) || data.stageNumber < 1 || data.stageNumber > 2147483647)) throw Error('stageNumber: укажите номер этапа целым числом от 1.');
   if ('stageAmount' in data && !['string', 'number'].includes(typeof data.stageAmount)) throw Error('stageAmount: ожидается сумма строкой или числом.');
   if (typeof data.stageAmount === 'number' && Math.abs(data.stageAmount) > Number.MAX_SAFE_INTEGER) throw Error('stageAmount: передайте большую сумму строкой для сохранения точности.');
-  if ('stageAmount' in data && !/^\d+([.,]\d{1,2})?$/.test(String(data.stageAmount))) throw Error('stageAmount: укажите только цифры и до двух знаков после запятой.');
+  if ('stageAmount' in data && !/^\d*([.,]\d{0,2})?$/.test(String(data.stageAmount))) throw Error('stageAmount: укажите только цифры и до двух знаков после запятой.');
   for (const name of reports) {
     if (!(name in data)) continue;
     const report = data[name];
@@ -69,20 +73,18 @@ function checkDateFields(value, path, fields) {
 function fillRequestData(data) {
   checkRequestData(data);
   reportForm.reset();
-  calculationDate.value = 'calculationDate' in data ? data.calculationDate ?? '' : today();
+  calculationDate.value = data.calculationDate ?? '';
   contractNumber.value = data.contractNumber?.slice(4) ?? '';
+  stageNumber.value = data.stageNumber ?? '';
   stageAmount.value = data.stageAmount ?? '';
   submissionDates.querySelectorAll('[name]').forEach(input => input.value = data[input.name] ?? '');
   for (const panel of panels) {
-    const report = data[`${panel.dataset.report}Report`];
-    if (!report) continue;
-    panel.dataset.requestReport = 'true';
+    const report = data[`${panel.dataset.report}Report`] ?? {};
     const rows = panel.querySelector('tbody');
     const cases = report.cases ?? [];
-    while (rows.rows.length < cases.length) panel.querySelector('.add-case').click();
+    while (rows.rows.length < cases.length) addCaseRow(panel);
     cases.forEach((item, index) => {
       const row = rows.rows[index];
-      row.dataset.requestCase = 'true';
       row.querySelectorAll('[data-field][data-date]').forEach(input => input.value = item[input.dataset.field] ?? '');
       row.querySelector('[data-field="remarksCorrected"]').checked = item.remarksCorrected ?? true;
     });
@@ -90,11 +92,8 @@ function fillRequestData(data) {
     updateCaseNumbers(panel);
     updatePanelPlannedDates(panel);
   }
-  for (const value of data.daysToExcludeManually ?? []) {
-    document.querySelector('#add-excluded-date').click();
-    excludedDateRows.lastElementChild.querySelector('input').value = value;
-  }
-  stageAmount.dispatchEvent(new Event('input', { bubbles: true }));
+  for (const value of data.daysToExcludeManually ?? []) addExcludedDate(value);
+  formatAmount(stageAmount);
   validateForm();
   updateJsonFromForm();
 }

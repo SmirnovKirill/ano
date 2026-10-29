@@ -5,19 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Расчет неустойки по этапу</title>
   <link rel="stylesheet" href="/report.css">
+  <link rel="stylesheet" href="/cats.css">
   <script src="/report.js" defer></script>
   <script src="/request-data.js" defer></script>
   <script src="/json-editor.js" defer></script>
+  <script src="/cats.js" defer></script>
   <script src="/test-data.js" defer></script>
 </head>
 <body>
 <main>
-  <h1>Расчет неустойки по этапу</h1>
+  <form id="reports-form" novalidate>
+  <header class="report-heading">
+    <h1>Расчет неустойки по этапу</h1>
+    <label class="stage-number">№ этапа
+      <input id="stage-number" name="stageNumber" inputmode="numeric" pattern="[0-9]+" maxlength="10" placeholder="От 1" aria-label="Номер этапа — целое число от 1" required>
+    </label>
+  </header>
   <div class="editor-modes" role="group" aria-label="Режим ввода">
     <button id="form-mode" type="button" aria-pressed="true">Форма</button>
     <button id="json-mode" type="button" aria-pressed="false">JSON</button>
   </div>
-  <form id="reports-form" novalidate>
   <div id="form-editor">
   <label class="contract-number">Номер договора
     <span class="contract-input"><span>Г-00</span><input id="contract-number" name="contractNumber" inputmode="numeric" pattern="(0[1-9]|[1-7][0-9]|80)" maxlength="2" placeholder="01–80" aria-label="Номер договора от 01 до 80" required></span>
@@ -103,7 +110,7 @@
   </fieldset>
   <template id="excluded-date-template">
     <div class="excluded-date-row">
-      <input data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-label="Исключаемая дата">
+      <input data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" aria-label="Исключаемая дата" required>
       <button class="remove-excluded-date" type="button" aria-label="Удалить исключаемую дату">Удалить</button>
     </div>
   </template>
@@ -125,10 +132,6 @@
     </div>
   </form>
   <section id="calculation-result" aria-live="polite" hidden></section>
-  <dialog id="calculation-loader" aria-labelledby="loading-text">
-    <img src="/manya.gif" alt="Маня Понич таращит глаза" width="180" height="180">
-    <p id="loading-text">Считаем…</p>
-  </dialog>
 </main>
 </body>
 </html>

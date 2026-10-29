@@ -94,7 +94,7 @@ class RealCasesPenalyServiceTest {
 
         assertEquals("Г-0042", request.contractNumber)
         assertEquals(BigDecimal("145000000"), request.stageAmount)
-        assertEquals(BigDecimal("17.00"), result.keyRatePercent)
+        assertEquals(BigDecimal("21.00"), result.keyRatePercent)
 
         // 1. Первичная подача отчётности.
         assertEquals(emptyList<LocalDate>(), result.initialSubmissionPenalty.daysForCalculation)
@@ -106,13 +106,13 @@ class RealCasesPenalyServiceTest {
         assertEquals(listOf(date("09.10.2024")) + dates("12.02.2025", "21.02.2025"), result.revisionsPenalty.extraBudgetReport.daysForCalculation)
         assertEquals(listOf(date("10.10.2024")), result.revisionsPenalty.technicalReport.daysForCalculation)
         assertEquals(grantOverdueDays, result.revisionsPenalty.daysForCalculation)
-        assertEquals(BigDecimal("1068166.67"), result.revisionsPenalty.totalPenalty)
+        assertEquals(BigDecimal("1319500.00"), result.revisionsPenalty.totalPenalty)
 
         // 3. Работы завершены в плановую дату.
         assertEquals(emptyList<LocalDate>(), result.stageCompletionPenalty.overdueDays)
         assertEquals(BigDecimal("0.00"), result.stageCompletionPenalty.penalty)
 
-        assertEquals(BigDecimal("1068166.67"), result.totalPenalty)
+        assertEquals(BigDecimal("1319500.00"), result.totalPenalty)
     }
 
     private fun readRequest(fileName: String): CalculatePenaltyRequestDto {

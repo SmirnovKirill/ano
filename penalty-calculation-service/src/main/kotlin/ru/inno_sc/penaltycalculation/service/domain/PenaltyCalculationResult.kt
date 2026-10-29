@@ -4,13 +4,14 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 data class PenaltyCalculationResult(
+    val stageNumber: Int,
     val contractNumber: String,
     val stageAmount: BigDecimal,
     val calculationDate: LocalDate,
     val keyRatePercent: BigDecimal,
     val initialSubmissionPenalty: InitialSubmissionPenalty,
     val revisionsPenalty: AllReportsRevisionPenalty,
-    val stageCompletionPenalty: StageCompletionPenalty
+    val stageCompletionPenalty: StageCompletionPenalty,
 ) {
     val totalPenalty: BigDecimal get() = initialSubmissionPenalty.penalty + revisionsPenalty.totalPenalty + stageCompletionPenalty.penalty
 }

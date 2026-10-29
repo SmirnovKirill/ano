@@ -59,6 +59,33 @@ class PenaltyCalculationValidationTest : AbstractTest() {
     }
 
     @Test
+    fun `requires stage number in the JSON request`() {
+        for (explicitNull in listOf(false, true)) {
+            val json = mapper.readTree(mapper.writeValueAsString(request())) as ObjectNode
+            if (explicitNull) json.putNull("stageNumber") else json.remove("stageNumber")
+            val error = assertThrows(Exception::class.java) {
+                mapper.treeToValue(json, CalculatePenaltyRequestDto::class.java)
+            }
+            assertTrue(error.message.orEmpty().contains("stageNumber"), error.message)
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = [-1, 0])
+    fun `rejects nonpositive stage numbers`(stageNumber: Int) {
+        rejects(request().copy(stageNumber = stageNumber), "Номер этапа")
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = [1, 2])
+    fun `returns the supplied stage number without changing the calculation`(stageNumber: Int) {
+        val result = service.calculate(request().copy(stageNumber = stageNumber))
+
+        assertEquals(stageNumber, result.stageNumber)
+        assertEquals(BigDecimal("0.00"), result.totalPenalty)
+    }
+
+    @Test
     fun `requires each completion date in the JSON request`() {
         for (field in listOf("plannedCompletionDate", "actualCompletionDate")) {
             val json = mapper.readTree(mapper.writeValueAsString(request())) as ObjectNode
@@ -193,6 +220,7 @@ class PenaltyCalculationValidationTest : AbstractTest() {
     }
 
     private fun request() = CalculatePenaltyRequestDto(
+        stageNumber = 1,
         calculationDate = calculationDate,
         contractNumber = "Г-0001",
         stageAmount = BigDecimal("100000"),

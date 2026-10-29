@@ -23,8 +23,9 @@ class PenaltyCalculationResultConverterTest : AbstractTest() {
     fun `renders revision penalty calculated from unique overdue days across reports`() {
         val report = SingleReportRevisionPenalty(listOf(date("05.03.2026")), emptyList())
 
-        val dto = result(grantReport = report, extraBudgetReport = report, revisionsTotalPenalty = BigDecimal("23333.34")).toDto()
+        val dto = result(grantReport = report, extraBudgetReport = report, revisionsTotalPenalty = BigDecimal("23333.34")).copy(stageNumber = 4).toDto()
 
+        assertEquals(4, dto.stageNumber)
         assertEquals("28.10.2026", dto.calculationDate)
         assertEquals("14%", dto.keyRatePercent)
         assertEquals("05.03.2026", dto.revisionsPenalty.daysForCalculation)
@@ -83,6 +84,7 @@ class PenaltyCalculationResultConverterTest : AbstractTest() {
         extraBudgetReport: SingleReportRevisionPenalty = emptyReport(),
         revisionsTotalPenalty: BigDecimal = BigDecimal("0.00"),
     ) = PenaltyCalculationResult(
+        stageNumber = 1,
         contractNumber = "Г-0029",
         stageAmount = stageAmount,
         calculationDate = date("28.10.2026"),

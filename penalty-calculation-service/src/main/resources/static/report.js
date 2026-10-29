@@ -1,9 +1,8 @@
 const tabs = [...document.querySelectorAll('[role="tab"]')];
 const template = document.querySelector('#report-form');
 const reportForm = document.querySelector('#reports-form');
-const heading = document.querySelector('h1');
-const expensesTitle = heading.textContent;
 const contractNumber = document.querySelector('#contract-number');
+const stageNumber = document.querySelector('#stage-number');
 const submissionDates = document.querySelector('.submission-dates');
 const calculationInputs = document.querySelector('.calculation-inputs');
 const stageAmount = calculationInputs.querySelector('[name="stageAmount"]');
@@ -11,7 +10,6 @@ const excludedDateRows = document.querySelector('#excluded-date-rows');
 const result = document.querySelector('#result');
 const calculationResult = document.querySelector('#calculation-result');
 const submit = document.querySelector('#submit-report');
-const loader = document.querySelector('#calculation-loader');
 const calculationDate = document.querySelector('#calculationDate');
 const plannedDateHint = template.querySelector('[data-planned-date]').textContent;
 function today() {
@@ -35,10 +33,6 @@ function dateError(value) {
   if (!date) return 'Введите корректную дату в формате дд.мм.гггг.';
   return date > new Date() ? 'Дата не может быть в будущем.' : '';
 }
-loader.addEventListener('cancel', event => event.preventDefault());
-loader.addEventListener('keydown', event => {
-  if (event.key === 'Escape') event.preventDefault();
-});
 
 const panels = tabs.map((tab, index) => {
   const panel = index ? template.cloneNode(true) : template;
@@ -63,7 +57,6 @@ tabs.forEach((tab, index) => tab.addEventListener('click', () => {
     button.tabIndex = i === index ? 0 : -1;
     panels[i].hidden = i !== index;
   });
-  heading.textContent = tab.dataset.report === 'technical' ? 'Расчет неустойки по этапу' : expensesTitle;
 }));
 
 document.querySelector('.tabs').addEventListener('keydown', event => {
@@ -78,21 +71,8 @@ document.querySelector('.tabs').addEventListener('keydown', event => {
 reportForm.addEventListener('input', ({ target }) => {
   if (!target.matches('input')) return;
   if (target === contractNumber) target.value = target.value.replace(/\D/g, '').slice(0, 2);
-  if (target === stageAmount) {
-    let value = target.value.replace(/[^\d.,]/g, '');
-    const separator = value.search(/[.,]/);
-    if (separator !== -1) value = value.slice(0, separator + 1) + value.slice(separator + 1).replace(/[.,]/g, '').slice(0, 2);
-    if (/^\d*(?:[.,]\d{0,2})?$/.test(value)) {
-      let remaining = target.value.slice(0, target.selectionStart).replace(/[^\d.,]/g, '').length;
-      target.value = value.replace(/^\d+/, digits => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' '));
-      let caret = 0;
-      while (remaining > 0 && caret < target.value.length) {
-        if (target.value[caret] !== ' ') remaining--;
-        caret++;
-      }
-      target.setSelectionRange(caret, caret);
-    }
-  }
+  if (target === stageNumber) target.value = target.value.replace(/\D/g, '');
+  if (target === stageAmount) formatAmount(target);
   if (target.matches('[data-date]')) {
     const beforeCaret = target.value.slice(0, target.selectionStart).replace(/\D/g, '').length;
     target.value = target.value.replace(/\D/g, '').slice(0, 8)
@@ -106,6 +86,20 @@ reportForm.addEventListener('input', ({ target }) => {
   validateForm();
 });
 
+function formatAmount(input) {
+  let value = input.value.replace(/[^\d.,]/g, '');
+  const separator = value.search(/[.,]/);
+  if (separator !== -1) value = value.slice(0, separator + 1) + value.slice(separator + 1).replace(/[.,]/g, '').slice(0, 2);
+  let remaining = input.value.slice(0, input.selectionStart).replace(/[^\d.,]/g, '').length;
+  input.value = value.replace(/^\d+/, digits => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' '));
+  let caret = 0;
+  while (remaining > 0 && caret < input.value.length) {
+    if (input.value[caret] !== ' ') remaining--;
+    caret++;
+  }
+  input.setSelectionRange(caret, caret);
+}
+
 reportForm.addEventListener('change', ({ target }) => {
   if (!target.matches('[data-field="remarksCorrected"]')) return;
   const panel = target.closest('[role="tabpanel"]');
@@ -115,9 +109,16 @@ reportForm.addEventListener('change', ({ target }) => {
 });
 
 document.querySelector('#add-excluded-date').addEventListener('click', () => {
-  excludedDateRows.append(document.querySelector('#excluded-date-template').content.cloneNode(true));
-  excludedDateRows.lastElementChild.querySelector('input').focus();
+  addExcludedDate().querySelector('input').focus();
 });
+
+function addExcludedDate(value = '') {
+  excludedDateRows.append(document.querySelector('#excluded-date-template').content.cloneNode(true));
+  const row = excludedDateRows.lastElementChild;
+  row.querySelector('input').value = value;
+  return row;
+}
+
 excludedDateRows.addEventListener('click', ({ target }) => {
   if (!target.matches('.remove-excluded-date')) return;
   target.closest('.excluded-date-row').remove();
@@ -125,7 +126,6 @@ excludedDateRows.addEventListener('click', ({ target }) => {
 });
 
 function clearCaseRow(row) {
-  delete row.dataset.requestCase;
   row.querySelectorAll('.case-cell input').forEach(input => {
     if (input.type === 'checkbox') input.checked = true;
     else input.value = '';
@@ -136,6 +136,15 @@ function clearCaseRow(row) {
   planned.textContent = plannedDateHint;
 }
 
+function addCaseRow(panel) {
+  const rows = panel.querySelector('tbody');
+  const row = rows.insertRow();
+  rows.rows[0].querySelectorAll('.case-cell').forEach(cell => row.append(cell.cloneNode(true)));
+  clearCaseRow(row);
+  rows.querySelector('.shared').rowSpan = rows.rows.length;
+  return row;
+}
+
 panels.forEach(panel => {
   const completionDates = panel.querySelector('.completion-dates');
   if (panel.dataset.report === 'technical') completionDates.hidden = false;
@@ -144,13 +153,9 @@ panels.forEach(panel => {
   const rows = panel.querySelector('tbody');
 
   panel.querySelector('.add-case').addEventListener('click', () => {
-    const row = rows.insertRow();
-    rows.rows[0].querySelectorAll('.case-cell').forEach(cell => row.append(cell.cloneNode(true)));
-    clearCaseRow(row);
-    row.dataset.requestCase = 'true';
+    const row = addCaseRow(panel);
     updateCaseNumbers(panel);
     updatePanelPlannedDates(panel);
-    rows.querySelectorAll('.shared').forEach(cell => cell.rowSpan = rows.rows.length);
     validateForm();
     row.querySelector('[data-date]').focus();
   });
@@ -176,7 +181,6 @@ reportForm.addEventListener('reset', event => {
   event.preventDefault();
   reportForm.querySelectorAll('[data-planned-date]').forEach(cell => cell.calculationRequest = null);
   panels.forEach(panel => {
-    delete panel.dataset.requestReport;
     const rows = panel.querySelector('tbody');
     [...rows.rows].slice(1).forEach(row => row.remove());
     clearCaseRow(rows.rows[0]);
@@ -198,35 +202,37 @@ reportForm.addEventListener('reset', event => {
 
 function validateForm() {
   contractNumber.setCustomValidity(/^(0[1-9]|[1-7][0-9]|80)$/.test(contractNumber.value) ? '' : 'Введите номер от 01 до 80.');
+  stageNumber.setCustomValidity(/^\d+$/.test(stageNumber.value) && Number(stageNumber.value) >= 1 && Number(stageNumber.value) <= 2147483647 ? '' : 'Укажите номер этапа целым числом от 1.');
   stageAmount.setCustomValidity(/^\d+([.,]\d{1,2})?$/.test(stageAmount.value.replace(/\s/g, '')) ? '' : 'Укажите сумму с точностью до двух знаков после запятой.');
   const asOf = parseDate(calculationDate.value);
   reportForm.querySelectorAll('[data-date]').forEach(input => {
-    let error = input.required || input.value ? dateError(input.value) : '';
+    let error = dateError(input.value);
     if (!error && input.value && input !== calculationDate && asOf && parseDate(input.value) > asOf) error = 'Дата не может быть позже даты расчёта.';
     input.setCustomValidity(error);
   });
   reportForm.querySelectorAll('[data-field="remarksCorrected"]').forEach(input => input.setCustomValidity(''));
   const submitted = submissionDates.querySelector('[name="reportActualSubmissionDate"]');
-  const notBefore = (input, previous, message) => {
-    if (input.validity.valid && previous.validity.valid && parseDate(input.value) < parseDate(previous.value)) {
-      input.setCustomValidity(message);
-    }
-  };
   for (const panel of panels) {
     let previous = submitted;
     for (const row of panel.querySelector('tbody').rows) {
       const returned = row.querySelector('[data-field="returnedForRevisionDate"]');
       const actual = row.querySelector('[data-field="actualSubmissionDate"]');
-      notBefore(returned, previous, 'Возврат на доработку не может предшествовать предыдущей подаче отчёта.');
-      notBefore(actual, returned, 'Подача доработанного отчёта не может предшествовать возврату.');
+      validateDateOrder(returned, previous, 'Возврат на доработку не может предшествовать предыдущей подаче отчёта.');
+      validateDateOrder(actual, returned, 'Подача доработанного отчёта не может предшествовать возврату.');
       previous = actual;
     }
     const approval = panel.querySelector('[name="reportApprovalDate"]');
-    notBefore(approval, previous, 'Согласование не может предшествовать последней подаче отчёта.');
+    validateDateOrder(approval, previous, 'Согласование не может предшествовать последней подаче отчёта.');
     const corrected = panel.querySelector('tbody').lastElementChild.querySelector('[data-field="remarksCorrected"]');
     corrected.setCustomValidity(corrected.checked ? '' : 'Исправьте замечания последнего кейса или добавьте повторную доработку.');
   }
   updateOverdueWarnings();
+}
+
+function validateDateOrder(input, previous, message) {
+  if (input.validity.valid && previous.validity.valid && parseDate(input.value) < parseDate(previous.value)) {
+    input.setCustomValidity(message);
+  }
 }
 
 function updateOverdueWarnings() {
@@ -341,7 +347,7 @@ function overdueDaySteps(item) {
 function renderCalculation(data) {
   calculationResult.replaceChildren();
   calculationResult.append(
-    textElement('h2', `Расчёт по договору ${data.contractNumber}`),
+    textElement('h2', `Расчёт по договору ${data.contractNumber}, этап ${data.stageNumber}`),
     textElement('p', `Дата расчёта: ${data.calculationDate}. Сумма этапа: ${data.stageAmount}. Ключевая ставка ЦБ: ${data.keyRatePercent} на дату расчёта.`),
     textElement('p', data.formula),
     textElement('p', data.overdueDaysExplanation),
@@ -390,6 +396,19 @@ function renderCalculation(data) {
   calculationResult.hidden = false;
 }
 
+async function postRequest(path, data) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw Error(error.detail || 'Не удалось выполнить запрос. Проверьте данные и повторите попытку.');
+  }
+  return response;
+}
+
 reportForm.addEventListener('submit', async event => {
   event.preventDefault();
   const data = validatedRequest();
@@ -397,24 +416,17 @@ reportForm.addEventListener('submit', async event => {
   submit.disabled = true;
   result.textContent = '';
   calculationResult.hidden = true;
-  loader.showModal();
-  const loadingTime = new Promise(resolve => setTimeout(resolve, 1000));
+  const loadingTime = showCalculationCat();
   try {
-    const response = await fetch('/api/reports/penalty-calculation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
+    const response = await postRequest('/api/reports/penalty-calculation', data);
     const calculation = await response.json();
-    if (!response.ok) throw new Error(calculation.detail || 'Не удалось рассчитать неустойку. Проверьте данные и повторите попытку.');
-    await loadingTime;
     renderCalculation(calculation);
     result.textContent = `Неустойка: ${calculation.totalPenalty}.`;
   } catch (error) {
-    await loadingTime;
     result.textContent = error.message;
   } finally {
-    loader.close();
+    await loadingTime;
+    hideCalculationCat();
     submit.disabled = false;
   }
 });
@@ -426,15 +438,7 @@ document.querySelector('#export-report').addEventListener('click', async event =
   button.disabled = true;
   result.textContent = 'Готовим Excel…';
   try {
-    const response = await fetch('/api/reports/penalty-calculation/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      const error = await response.json();
-      throw Error(error.detail || 'Не удалось выгрузить расчёт.');
-    }
+    const response = await postRequest('/api/reports/penalty-calculation/export', data);
     const url = URL.createObjectURL(await response.blob());
     const link = document.createElement('a');
     link.href = url;

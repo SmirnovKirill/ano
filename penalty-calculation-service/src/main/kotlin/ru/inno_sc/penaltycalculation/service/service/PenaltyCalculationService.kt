@@ -36,6 +36,7 @@ class PenaltyCalculationService(
             initialSubmissionPenalty = initialSubmissionPenalty,
             revisionsPenalty = revisionsPenalty,
             stageCompletionPenalty = stageCompletionPenalty,
+            stageNumber = reports.stageNumber,
         )
     }
 

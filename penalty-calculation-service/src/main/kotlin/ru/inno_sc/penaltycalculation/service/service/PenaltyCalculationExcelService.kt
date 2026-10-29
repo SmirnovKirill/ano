@@ -27,6 +27,7 @@ class PenaltyCalculationExcelService {
         }
         row(summary, headingStyle, "Расчёт неустойки")
         row(summary, textStyle, "Договор", result.contractNumber)
+        row(summary, textStyle, "Номер этапа", result.stageNumber.toString())
         row(summary, textStyle, "Дата расчёта", result.calculationDate)
         row(summary, textStyle, "Сумма этапа", result.stageAmount)
         row(summary, textStyle, "Ключевая ставка", result.keyRatePercent)

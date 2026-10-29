@@ -6,6 +6,10 @@
 
 body { margin: 24px; padding-bottom: calc(var(--actions-height, 110px) + 24px); color: #161616; font: 14px "Times New Roman", serif; }
 h1 { margin: 0 0 24px; text-align: center; font-size: 21px; }
+.report-heading { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 24px; }
+.report-heading h1 { margin: 0; }
+.stage-number { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.stage-number input { width: 80px; border-color: var(--border); background: var(--blue); }
 .contract-number, .submission-dates label, .completion-dates label, .calculation-inputs label { display: grid; gap: 6px; width: 260px; }
 .contract-number { margin-bottom: 20px; }
 .contract-input { display: flex; align-items: center; gap: 4px; }
@@ -74,10 +78,6 @@ output { overflow-wrap: anywhere; }
 #calculation-result tfoot { background: var(--green); font-weight: bold; }
 #calculation-result details { margin-top: 16px; }
 #calculation-result summary { margin-bottom: 12px; cursor: pointer; }
-#calculation-loader { padding: 32px; border: 0; background: transparent; text-align: center; }
-#calculation-loader::backdrop { background: #ffffffdc; }
-#calculation-loader img { display: block; object-fit: contain; }
-#loading-text { margin: 28px 0 0; font-size: 18px; }
 
 @media (max-width: 600px) {
   body { margin: 16px 12px; }

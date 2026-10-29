@@ -4,6 +4,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 data class CalculatePenaltyRequestDto(
+    val stageNumber: Int,
     val contractNumber: String,
     val stageAmount: BigDecimal,
     val calculationDate: LocalDate,

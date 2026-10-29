@@ -3,6 +3,7 @@ package ru.inno_sc.penaltycalculation.api.penalty.response
 import java.time.LocalDate
 
 data class PenaltyCalculationResultDto(
+    val stageNumber: Int,
     val contractNumber: String,
     val stageAmount: String,
     val calculationDate: String,

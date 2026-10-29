@@ -226,6 +226,7 @@ class PenaltyCalculationServiceTest : AbstractTest() {
     private fun request(): CalculatePenaltyRequestDto {
         val case = case("02.03.2026", "05.03.2026")
         return CalculatePenaltyRequestDto(
+            stageNumber = 1,
             calculationDate = date("28.10.2026"),
             contractNumber = "Г-0001",
             stageAmount = BigDecimal("50000000"),

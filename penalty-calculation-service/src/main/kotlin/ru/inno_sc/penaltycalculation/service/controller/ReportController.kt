@@ -16,6 +16,7 @@ import ru.inno_sc.penaltycalculation.api.penalty.request.CalculatePenaltyRequest
 import ru.inno_sc.penaltycalculation.api.penalty.response.PenaltyCalculationResultDto
 import ru.inno_sc.penaltycalculation.service.converter.toDto
 import ru.inno_sc.penaltycalculation.service.service.PenaltyCalculationExcelService
+import ru.inno_sc.penaltycalculation.service.config.CommonConfig.Companion.DATE_FORMATTER
 import ru.inno_sc.penaltycalculation.service.config.CommonConfig.Companion.DATE_PATTERN
 import ru.inno_sc.penaltycalculation.service.service.ReportRevisionPlannedDateService
 import ru.inno_sc.penaltycalculation.service.service.PenaltyCalculationService
@@ -35,7 +36,7 @@ class ReportController(
     fun exportPenalty(@RequestBody request: CalculatePenaltyRequestDto): ResponseEntity<ByteArray> {
         val calculation = penaltyCalculationService.calculate(request).toDto()
         val xlsxBytes = penaltyCalculationExcelService.generate(request, calculation)
-        val fileName = "penalty_${request.contractNumber}_${request.calculationDate}.xlsx"
+        val fileName = "${request.contractNumber}_№${request.stageNumber}_${request.calculationDate.format(DATE_FORMATTER)}.xlsx"
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
             .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(fileName, StandardCharsets.UTF_8).build().toString())

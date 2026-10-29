@@ -29,17 +29,21 @@ jsonEditor.addEventListener('input', () => {
   result.textContent = '';
   try {
     const data = JSON.parse(jsonEditor.value);
-    if (data && typeof data === 'object' && !Array.isArray(data)) calculationDate.value = typeof data.calculationDate === 'string' ? data.calculationDate : '';
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      calculationDate.value = typeof data.calculationDate === 'string' ? data.calculationDate : '';
+      stageNumber.value = Number.isInteger(data.stageNumber) ? data.stageNumber : '';
+    }
   } catch { /* Незавершённый JSON сохраняется до исправления. */ }
 });
 reportForm.addEventListener('input', ({ target }) => {
-  if (target === calculationDate && !jsonPanel.hidden) {
+  if ((target === calculationDate || target === stageNumber) && !jsonPanel.hidden) {
     try {
       const data = readJsonRequest();
-      data.calculationDate = calculationDate.value;
+      if (target === calculationDate) data.calculationDate = calculationDate.value;
+      else data.stageNumber = stageNumber.value ? Number(stageNumber.value) : null;
       jsonEditor.value = JSON.stringify(data, null, 2);
     } catch (error) {
-      result.textContent = `Дата не перенесена в запрос: ${error.message}`;
+      result.textContent = `Поле не перенесено в запрос: ${error.message}`;
     }
   }
 });
@@ -50,30 +54,27 @@ function updateJsonFromForm() {
 }
 
 function readJsonRequest() {
-  let data;
-  try { data = JSON.parse(jsonEditor.value); }
-  catch (error) { throw Error(`Ошибка JSON: ${error.message}`); }
-  checkRequestData(data);
-  return data;
+  try {
+    const data = JSON.parse(jsonEditor.value);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw Error('Ожидается объект запроса.');
+    return data;
+  } catch (error) { throw Error(`Ошибка JSON: ${error.message}`); }
 }
 
 function validatedRequest() {
   if (!jsonPanel.hidden) {
     try {
-      const data = readJsonRequest();
-      if (!data.calculationDate) throw Error('JSON: укажите обязательное поле calculationDate.');
-      fillRequestData(data);
+      fillRequestData(readJsonRequest());
     } catch (error) {
       result.textContent = error.message;
       jsonEditor.focus();
       return null;
     }
   }
-  contractNumber.value = contractNumber.value.trim();
   validateForm();
   const invalid = reportForm.querySelector('input:invalid');
   if (invalid) {
-    if (!jsonPanel.hidden && invalid !== calculationDate) {
+    if (!jsonPanel.hidden && formEditor.contains(invalid)) {
       result.textContent = `Проверьте JSON: ${invalid.validationMessage}`;
       jsonEditor.focus();
       return null;

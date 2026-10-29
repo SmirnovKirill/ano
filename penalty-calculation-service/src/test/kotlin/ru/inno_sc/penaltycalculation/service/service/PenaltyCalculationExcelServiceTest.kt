@@ -30,12 +30,13 @@ class PenaltyCalculationExcelServiceTest : AbstractTest() {
         val response = controller.exportPenalty(request())
 
         assertEquals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.headers.contentType.toString())
-        assertEquals("penalty_Г-0029_2026-10-28.xlsx", ContentDisposition.parse(response.headers.getFirst(HttpHeaders.CONTENT_DISPOSITION)!!).filename)
+        assertEquals("Г-0029_№4_28.10.2026.xlsx", ContentDisposition.parse(response.headers.getFirst(HttpHeaders.CONTENT_DISPOSITION)!!).filename)
         XSSFWorkbook(ByteArrayInputStream(requireNotNull(response.body))).use { workbook ->
             assertEquals(listOf("Итог", "Грант", "Внебюджет", "Тех"), (0 until workbook.numberOfSheets).map { workbook.getSheetName(it) })
             val summary = workbook.getSheet("Итог")
             fun value(label: String) = summary.first { it.getCell(0)?.stringCellValue == label }.getCell(1)
             assertEquals("Г-0029", value("Договор").stringCellValue)
+            assertEquals("4", value("Номер этапа").stringCellValue)
             assertEquals("28.10.2026", value("Дата расчёта").stringCellValue)
             assertEquals("50\u00a0000\u00a0000,00\u00a0₽", value("Сумма этапа").stringCellValue)
             assertEquals("14%", value("Ключевая ставка").stringCellValue)
@@ -75,6 +76,6 @@ class PenaltyCalculationExcelServiceTest : AbstractTest() {
     private fun request(): CalculatePenaltyRequestDto {
         val json = requireNotNull(javaClass.getResourceAsStream("/static/test-case-1.json")).use { mapper.readTree(it) } as ObjectNode
         json.put("calculationDate", LocalDate.now(clock).format(DATE_FORMATTER))
-        return mapper.treeToValue(json, CalculatePenaltyRequestDto::class.java)
+        return mapper.treeToValue(json, CalculatePenaltyRequestDto::class.java).copy(stageNumber = 4)
     }
 }

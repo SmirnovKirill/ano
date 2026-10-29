@@ -16,6 +16,7 @@ import java.util.Locale
 
 fun PenaltyCalculationResult.toDto(): PenaltyCalculationResultDto {
     return PenaltyCalculationResultDto(
+        stageNumber = stageNumber,
         contractNumber = contractNumber,
         stageAmount = money(stageAmount),
         calculationDate = calculationDate.format(DATE_FORMATTER),
