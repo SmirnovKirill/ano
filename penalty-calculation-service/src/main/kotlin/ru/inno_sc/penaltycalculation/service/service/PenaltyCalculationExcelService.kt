@@ -35,18 +35,19 @@ class PenaltyCalculationExcelService {
         row(summary, textStyle, "Фактическая подача отчётности", request.reportActualSubmissionDate.format(DATE_FORMATTER))
         row(summary, textStyle, "Плановое завершение работ", request.technicalReport.plannedCompletionDate.format(DATE_FORMATTER))
         row(summary, textStyle, "Фактическое завершение работ", request.technicalReport.actualCompletionDate.format(DATE_FORMATTER))
-        row(summary, textStyle, "Формула", result.formula)
         row(summary, textStyle, "Правила подсчёта дней", result.overdueDaysExplanation)
         result.initialSubmissionPenalty.let {
-            stage(summary, textStyle, headingStyle, it.title, it.summary, it.formula, it.daysForCalculation, it.overdueDays, it.daysToExcludeManually)
+            stage(summary, textStyle, headingStyle, it.title, it.summary, it.daysForCalculation, it.overdueDays, it.daysToExcludeManually)
         }
         result.revisionsPenalty.let {
-            stage(summary, textStyle, headingStyle, it.title, it.summary, it.formula, it.daysForCalculation, it.overdueDays, it.daysToExcludeManually)
+            stage(summary, textStyle, headingStyle, it.title, it.summary, it.daysForCalculation, it.overdueDays, it.daysToExcludeManually)
             row(summary, textStyle, "Правило доработки", it.explanation)
         }
-        result.stageCompletionPenalty.let { stage(summary, textStyle, headingStyle, it.title, it.summary, it.formula, it.overdueDays) }
+        result.stageCompletionPenalty.let { stage(summary, textStyle, headingStyle, it.title, it.summary, it.overdueDays) }
+        row(summary, textStyle, "Всего дней просрочки", result.totalOverdueDaysCount.toString())
+        row(summary, textStyle, "Формула", result.formula)
+        row(summary, textStyle, "Итоговый расчёт", result.totalFormula)
         row(summary, headingStyle, "Итого", result.totalPenalty)
-        row(summary, textStyle, "Сложение неустоек", result.totalFormula)
 
         report(workbook, textStyle, headingStyle, "Грант", result.revisionsPenalty.grantReport, request.grantReport.reportApprovalDate)
         report(workbook, textStyle, headingStyle, "Внебюджет", result.revisionsPenalty.extraBudgetReport, request.extraBudgetReport.reportApprovalDate)
@@ -84,15 +85,13 @@ class PenaltyCalculationExcelService {
         headingStyle: CellStyle,
         title: String,
         summary: String,
-        formula: String,
         daysForCalculation: String,
         overdueDays: List<LocalDate> = emptyList(),
         daysToExcludeManually: List<LocalDate> = emptyList(),
     ) {
         row(sheet, headingStyle, title)
         row(sheet, textStyle, "Дни просрочки", daySteps(overdueDays, daysToExcludeManually, daysForCalculation))
-        row(sheet, textStyle, "Неустойка", summary)
-        row(sheet, textStyle, "Расчёт", formula)
+        row(sheet, textStyle, "Пояснение", summary)
     }
 
     private fun report(

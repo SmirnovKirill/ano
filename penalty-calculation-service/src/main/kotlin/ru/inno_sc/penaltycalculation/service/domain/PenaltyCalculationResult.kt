@@ -1,6 +1,7 @@
 package ru.inno_sc.penaltycalculation.service.domain
 
 import java.math.BigDecimal
+import java.math.RoundingMode.UP
 import java.time.LocalDate
 
 data class PenaltyCalculationResult(
@@ -13,12 +14,12 @@ data class PenaltyCalculationResult(
     val revisionsPenalty: AllReportsRevisionPenalty,
     val stageCompletionPenalty: StageCompletionPenalty,
 ) {
-    val totalPenalty: BigDecimal get() = initialSubmissionPenalty.penalty + revisionsPenalty.totalPenalty + stageCompletionPenalty.penalty
+    val totalOverdueDaysCount: Int get() = initialSubmissionPenalty.daysForCalculation.size + revisionsPenalty.daysForCalculation.size + stageCompletionPenalty.overdueDays.size
+    val totalPenalty: BigDecimal get() = stageAmount.multiply(keyRatePercent).multiply(BigDecimal.valueOf(totalOverdueDaysCount.toLong())).divide(BigDecimal(30000), 2, UP)
 }
 
 data class InitialSubmissionPenalty(
     val overdueDays: List<LocalDate>,
-    val penalty: BigDecimal,
     val daysToExcludeManually: List<LocalDate> = emptyList(),
 ) {
     val daysForCalculation: List<LocalDate> get() = overdueDays.filterNot { it in daysToExcludeManually }
@@ -28,7 +29,6 @@ data class AllReportsRevisionPenalty(
     val grantReport: SingleReportRevisionPenalty,
     val extraBudgetReport: SingleReportRevisionPenalty,
     val technicalReport: SingleReportRevisionPenalty,
-    val totalPenalty: BigDecimal
 ) {
     val overdueDays: List<LocalDate> get() = (grantReport.overdueDays + extraBudgetReport.overdueDays + technicalReport.overdueDays).sorted().distinct()
     val daysToExcludeManually: List<LocalDate> get() = (grantReport.daysToExcludeManually + extraBudgetReport.daysToExcludeManually + technicalReport.daysToExcludeManually).sorted().distinct()
@@ -57,5 +57,4 @@ data class ReportRevisionCase(
 
 data class StageCompletionPenalty(
     val overdueDays: List<LocalDate>,
-    val penalty: BigDecimal,
 )

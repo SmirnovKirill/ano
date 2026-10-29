@@ -202,7 +202,7 @@ reportForm.addEventListener('reset', event => {
 
 function validateForm() {
   contractNumber.setCustomValidity(/^(0[1-9]|[1-7][0-9]|80)$/.test(contractNumber.value) ? '' : 'Введите номер от 01 до 80.');
-  stageNumber.setCustomValidity(/^\d+$/.test(stageNumber.value) && Number(stageNumber.value) >= 1 && Number(stageNumber.value) <= 2147483647 ? '' : 'Укажите номер этапа целым числом от 1.');
+  stageNumber.setCustomValidity(/^\d+$/.test(stageNumber.value) && Number(stageNumber.value) >= 1 && Number(stageNumber.value) <= 10 ? '' : 'Укажите номер этапа целым числом от 1 до 10.');
   stageAmount.setCustomValidity(/^\d+([.,]\d{1,2})?$/.test(stageAmount.value.replace(/\s/g, '')) ? '' : 'Укажите сумму с точностью до двух знаков после запятой.');
   const asOf = parseDate(calculationDate.value);
   reportForm.querySelectorAll('[data-date]').forEach(input => {
@@ -349,9 +349,7 @@ function renderCalculation(data) {
   calculationResult.append(
     textElement('h2', `Расчёт по договору ${data.contractNumber}, этап ${data.stageNumber}`),
     textElement('p', `Дата расчёта: ${data.calculationDate}. Сумма этапа: ${data.stageAmount}. Ключевая ставка ЦБ: ${data.keyRatePercent} на дату расчёта.`),
-    textElement('p', data.formula),
     textElement('p', data.overdueDaysExplanation),
-    textElement('p', `Итоговая неустойка: ${data.totalPenalty}`, 'penalty-total'),
   );
   [data.initialSubmissionPenalty, data.revisionsPenalty, data.stageCompletionPenalty].forEach(stage => {
     const section = document.createElement('section');
@@ -373,7 +371,6 @@ function renderCalculation(data) {
       section.append(textElement('p', `Конкретные дни: ${stage.overdueDays}`, 'overdue-days'));
     }
     section.append(textElement('p', stage.summary, 'penalty-subtotal'));
-    if (stage.formula) section.append(textElement('p', stage.formula, 'penalty-formula'));
     if (stage === data.revisionsPenalty) {
       const reports = [stage.grantReport, stage.extraBudgetReport, stage.technicalReport];
       section.append(textElement('p', stage.explanation));
@@ -392,7 +389,11 @@ function renderCalculation(data) {
     }
     calculationResult.append(section);
   });
-  calculationResult.append(textElement('p', `Итого: ${data.totalFormula}`, 'penalty-total'));
+  calculationResult.append(
+    textElement('p', `Всего дней просрочки: ${data.totalOverdueDaysCount}.`),
+    textElement('p', data.formula),
+    textElement('p', `Итоговая неустойка: ${data.totalFormula}`, 'penalty-total'),
+  );
   calculationResult.hidden = false;
 }
 

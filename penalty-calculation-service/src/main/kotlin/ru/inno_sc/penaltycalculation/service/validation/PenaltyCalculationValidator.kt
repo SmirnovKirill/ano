@@ -11,7 +11,7 @@ class PenaltyCalculationValidator {
             "Укажите номер договора от Г-0001 до Г-0080."
         }
         require(request.stageAmount.signum() >= 0) { "Сумма этапа не может быть отрицательной." }
-        require(request.stageNumber > 0) { "Номер этапа должен быть положительным." }
+        require(request.stageNumber in 1..10) { "Номер этапа должен быть от 1 до 10." }
         validateDateNotFuture(request.reportPlannedSubmissionDate, "Плановая дата подачи отчётности", request.calculationDate)
         validateDateNotFuture(request.reportActualSubmissionDate, "Фактическая дата подачи отчётности", request.calculationDate)
 

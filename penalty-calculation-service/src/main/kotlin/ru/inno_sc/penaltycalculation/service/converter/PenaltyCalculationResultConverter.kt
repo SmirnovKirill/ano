@@ -27,8 +27,7 @@ fun PenaltyCalculationResult.toDto(): PenaltyCalculationResultDto {
             daysToExcludeManually = initialSubmissionPenalty.daysToExcludeManually,
             overdueDaysCount = initialSubmissionPenalty.daysForCalculation.size,
             title = "1. Неустойка по несвоевременной первой сдаче отчёта",
-            summary = summary(initialSubmissionPenalty.daysForCalculation.size, initialSubmissionPenalty.penalty),
-            formula = formula(initialSubmissionPenalty.daysForCalculation.size, initialSubmissionPenalty.penalty),
+            summary = summary(initialSubmissionPenalty.daysForCalculation.size),
         ),
         revisionsPenalty = AllReportsRevisionPenaltyDto(
             grantReport = revisionsPenalty.grantReport.toDto("Грант"),
@@ -39,8 +38,7 @@ fun PenaltyCalculationResult.toDto(): PenaltyCalculationResultDto {
             daysToExcludeManually = revisionsPenalty.daysToExcludeManually,
             overdueDaysCount = revisionsPenalty.daysForCalculation.size,
             title = "2. Неустойка по несвоевременной доработке отчёта",
-            summary = "Уникальных дней просрочки: ${revisionsPenalty.daysForCalculation.size}. Неустойка: ${money(revisionsPenalty.totalPenalty)}.",
-            formula = formula(revisionsPenalty.daysForCalculation.size, revisionsPenalty.totalPenalty),
+            summary = "Уникальных дней просрочки: ${revisionsPenalty.daysForCalculation.size}.",
             explanation = "Неустойка по доработке рассчитывается по уникальным дням просрочки всех трёх отчётов. Если одна дата встречается в нескольких отчётах, она учитывается один раз.",
             caseExplanation = "Неисправленные попытки подряд продолжают один кейс с прежним номером и исходной плановой датой. Просрочка длится до подачи исправленного отчёта, включая промежутки между попытками; внутри одного отчёта повторяющиеся дни учитываются один раз.",
         ),
@@ -48,13 +46,13 @@ fun PenaltyCalculationResult.toDto(): PenaltyCalculationResultDto {
             overdueDays = days(stageCompletionPenalty.overdueDays),
             overdueDaysCount = stageCompletionPenalty.overdueDays.size,
             title = "3. Неустойка по просрочке выполнения работ этапа",
-            summary = summary(stageCompletionPenalty.overdueDays.size, stageCompletionPenalty.penalty),
-            formula = formula(stageCompletionPenalty.overdueDays.size, stageCompletionPenalty.penalty),
+            summary = summary(stageCompletionPenalty.overdueDays.size),
         ),
+        totalOverdueDaysCount = totalOverdueDaysCount,
         totalPenalty = money(totalPenalty),
-        formula = "Формула: сумма этапа × ключевая ставка ЦБ / 100 × число дней просрочки / 300. Каждая сумма округляется вверх до копейки.",
+        formula = "Формула: сумма этапа × ключевая ставка ЦБ / 100 × сумма дней просрочки по трём типам / 300. Итог округляется вверх до копейки.",
         overdueDaysExplanation = "Календарные дни просрочки: со следующего дня после плановой даты. В пунктах 1 и 2 фактическая дата включается. В пункте 3 фактическая дата завершения работ не включается.",
-        totalFormula = "${money(initialSubmissionPenalty.penalty)} + ${money(revisionsPenalty.totalPenalty)} + ${money(stageCompletionPenalty.penalty)} = ${money(totalPenalty)}",
+        totalFormula = "${money(stageAmount)} × ${rate(keyRatePercent)} / 100 × (${initialSubmissionPenalty.daysForCalculation.size} + ${revisionsPenalty.daysForCalculation.size} + ${stageCompletionPenalty.overdueDays.size}) / 300 = ${money(totalPenalty)}",
     )
 }
 
@@ -86,7 +84,4 @@ private fun rate(value: BigDecimal): String = value.stripTrailingZeros().toPlain
 private fun days(values: List<LocalDate>): String = values.takeIf { it.isNotEmpty() }
     ?.joinToString(", ") { it.format(DATE_FORMATTER) } ?: "Нет просрочки"
 
-private fun PenaltyCalculationResult.formula(dayCount: Int, penalty: BigDecimal): String =
-    "${money(stageAmount)} × ${rate(keyRatePercent)} / 100 × $dayCount / 300 = ${money(penalty)}"
-
-private fun summary(dayCount: Int, penalty: BigDecimal): String = "Дней просрочки: $dayCount. Неустойка: ${money(penalty)}."
+private fun summary(dayCount: Int): String = "Дней просрочки: $dayCount."

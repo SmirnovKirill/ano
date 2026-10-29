@@ -16,6 +16,7 @@ import ru.inno_sc.penaltycalculation.service.controller.ReportController
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.node.ObjectNode
 import java.io.ByteArrayInputStream
+import java.math.BigDecimal
 import java.time.LocalDate
 
 class PenaltyCalculationExcelServiceTest : AbstractTest() {
@@ -48,6 +49,21 @@ class PenaltyCalculationExcelServiceTest : AbstractTest() {
             val firstCase = grant.getRow(header.rowNum + 1)
             assertEquals(listOf("1", "20.01.2026", "23.01.2026", "23.01.2026", "Исправлены", "Нет просрочки"), firstCase.map { it.stringCellValue })
             assertFalse(workbook.flatMap { sheet -> sheet.flatMap { row -> row.map { it.stringCellValue } } }.any { it.startsWith("Исходные дни:") })
+        }
+    }
+
+    @Test
+    fun `exports only the final penalty with one rounding`() {
+        val response = controller.exportPenalty(request().copy(stageAmount = BigDecimal.ONE))
+
+        XSSFWorkbook(ByteArrayInputStream(requireNotNull(response.body))).use { workbook ->
+            val summary = workbook.getSheet("Итог")
+            val total = summary.first { it.getCell(0)?.stringCellValue == "Итого" }
+            assertEquals("0,02\u00a0₽", total.getCell(1).stringCellValue)
+            val calculation = summary.first { it.getCell(0)?.stringCellValue == "Итоговый расчёт" }
+            assertTrue(calculation.getCell(1).stringCellValue.contains("(2 + 21 + 18)"))
+            assertEquals(total.rowNum - 1, calculation.rowNum)
+            assertFalse(summary.any { it.getCell(0)?.stringCellValue in listOf("Неустойка", "Сложение неустоек") })
         }
     }
 

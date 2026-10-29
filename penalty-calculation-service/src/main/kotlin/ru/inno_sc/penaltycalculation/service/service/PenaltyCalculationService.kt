@@ -9,8 +9,6 @@ import ru.inno_sc.penaltycalculation.service.domain.ReportRevisionCase
 import ru.inno_sc.penaltycalculation.service.domain.AllReportsRevisionPenalty
 import ru.inno_sc.penaltycalculation.service.domain.StageCompletionPenalty
 import ru.inno_sc.penaltycalculation.service.validation.PenaltyCalculationValidator
-import java.math.BigDecimal
-import java.math.RoundingMode.UP
 import java.time.Clock
 import java.time.LocalDate
 
@@ -24,9 +22,9 @@ class PenaltyCalculationService(
         validator.validate(reports, LocalDate.now(clock))
         val keyRatePercent = keyRates.rateOn(reports.calculationDate)
 
-        val initialSubmissionPenalty = calculateInitialSubmissionPenalty(reports, keyRatePercent)
-        val revisionsPenalty = calculateAllReportsRevisionPenalty(reports, keyRatePercent)
-        val stageCompletionPenalty = calculateStageCompletionPenalty(reports, keyRatePercent)
+        val initialSubmissionPenalty = calculateInitialSubmissionPenalty(reports)
+        val revisionsPenalty = calculateAllReportsRevisionPenalty(reports)
+        val stageCompletionPenalty = calculateStageCompletionPenalty(reports)
 
         return PenaltyCalculationResult(
             contractNumber = reports.contractNumber,
@@ -40,11 +38,10 @@ class PenaltyCalculationService(
         )
     }
 
-    fun calculateInitialSubmissionPenalty(reports: CalculatePenaltyRequestDto, keyRatePercent: BigDecimal): InitialSubmissionPenalty {
+    fun calculateInitialSubmissionPenalty(reports: CalculatePenaltyRequestDto): InitialSubmissionPenalty {
         val overdueDays = getCalendarOverdueDays(reports.reportPlannedSubmissionDate, reports.reportActualSubmissionDate)
         val daysToExcludeManually = overdueDays.filter { it in reports.daysToExcludeManually }
         return InitialSubmissionPenalty(
-            penalty = penalty((overdueDays.size - daysToExcludeManually.size).toLong(), reports.stageAmount, keyRatePercent),
             overdueDays = overdueDays,
             daysToExcludeManually = daysToExcludeManually,
         )
@@ -53,21 +50,16 @@ class PenaltyCalculationService(
     private fun getCalendarOverdueDays(planned: LocalDate, actual: LocalDate): List<LocalDate> =
         if (actual.isAfter(planned)) planned.plusDays(1).datesUntil(actual.plusDays(1)).toList() else emptyList()
 
-    private fun penalty(overdueDaysCount: Long, amount: BigDecimal, keyRatePercent: BigDecimal): BigDecimal =
-        amount.multiply(keyRatePercent).multiply(BigDecimal.valueOf(overdueDaysCount)).divide(BigDecimal(30000), 2, UP)
-
-    fun calculateAllReportsRevisionPenalty(reports: CalculatePenaltyRequestDto, keyRatePercent: BigDecimal): AllReportsRevisionPenalty {
+    fun calculateAllReportsRevisionPenalty(reports: CalculatePenaltyRequestDto): AllReportsRevisionPenalty {
         val daysToExcludeManually = reports.daysToExcludeManually.toSet()
         val grantReport = calculateSingleReportRevisionPenalty(reports.grantReport.cases, daysToExcludeManually)
         val extraBudgetReport = calculateSingleReportRevisionPenalty(reports.extraBudgetReport.cases, daysToExcludeManually)
         val technicalReport = calculateSingleReportRevisionPenalty(reports.technicalReport.cases, daysToExcludeManually)
-        val result = AllReportsRevisionPenalty(
+        return AllReportsRevisionPenalty(
             grantReport = grantReport,
             extraBudgetReport = extraBudgetReport,
             technicalReport = technicalReport,
-            totalPenalty = BigDecimal.ZERO,
         )
-        return result.copy(totalPenalty = penalty(result.daysForCalculation.size.toLong(), reports.stageAmount, keyRatePercent))
     }
 
     private fun calculateSingleReportRevisionPenalty(cases: List<ReportCaseDto>, daysToExcludeManually: Set<LocalDate>): SingleReportRevisionPenalty {
@@ -104,11 +96,11 @@ class PenaltyCalculationService(
         return result
     }
 
-    fun calculateStageCompletionPenalty(reports: CalculatePenaltyRequestDto, keyRatePercent: BigDecimal): StageCompletionPenalty {
+    fun calculateStageCompletionPenalty(reports: CalculatePenaltyRequestDto): StageCompletionPenalty {
         val technicalReport = reports.technicalReport
         val overdueDays = if (technicalReport.actualCompletionDate.isAfter(technicalReport.plannedCompletionDate)) {
             technicalReport.plannedCompletionDate.plusDays(1).datesUntil(technicalReport.actualCompletionDate).toList()
         } else emptyList() //Тут свои правила расчета, это корректная логика
-        return StageCompletionPenalty(overdueDays, penalty(overdueDays.size.toLong(), reports.stageAmount, keyRatePercent))
+        return StageCompletionPenalty(overdueDays)
     }
 }

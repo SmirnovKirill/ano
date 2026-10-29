@@ -71,13 +71,13 @@ class PenaltyCalculationValidationTest : AbstractTest() {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = [-1, 0])
-    fun `rejects nonpositive stage numbers`(stageNumber: Int) {
+    @ValueSource(ints = [-1, 0, 11, 2147483647])
+    fun `rejects stage numbers outside one to ten`(stageNumber: Int) {
         rejects(request().copy(stageNumber = stageNumber), "Номер этапа")
     }
 
     @ParameterizedTest
-    @ValueSource(ints = [1, 2])
+    @ValueSource(ints = [1, 2, 10])
     fun `returns the supplied stage number without changing the calculation`(stageNumber: Int) {
         val result = service.calculate(request().copy(stageNumber = stageNumber))
 
@@ -106,10 +106,10 @@ class PenaltyCalculationValidationTest : AbstractTest() {
 
         assertEquals(revised, historical.calculationDate)
         assertEquals(BigDecimal("16.00"), historical.keyRatePercent)
-        assertEquals(BigDecimal("53.34"), historical.initialSubmissionPenalty.penalty)
+        assertEquals(BigDecimal("53.34"), historical.totalPenalty)
         assertEquals(calculationDate, current.calculationDate)
         assertEquals(BigDecimal("14.00"), current.keyRatePercent)
-        assertEquals(BigDecimal("46.67"), current.initialSubmissionPenalty.penalty)
+        assertEquals(BigDecimal("46.67"), current.totalPenalty)
     }
 
     @Test
@@ -176,7 +176,7 @@ class PenaltyCalculationValidationTest : AbstractTest() {
         val result = service.calculate(request.copy(technicalReport = request.technicalReport.copy(actualCompletionDate = revised.plusDays(1))))
 
         assertEquals(listOf(revised), result.stageCompletionPenalty.overdueDays)
-        assertEquals(BigDecimal("46.67"), result.stageCompletionPenalty.penalty)
+        assertEquals(BigDecimal("46.67"), result.totalPenalty)
     }
 
     @Test

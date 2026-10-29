@@ -11,6 +11,7 @@ data class PenaltyCalculationResultDto(
     val initialSubmissionPenalty: InitialSubmissionPenaltyDto,
     val revisionsPenalty: AllReportsRevisionPenaltyDto,
     val stageCompletionPenalty: StageCompletionPenaltyDto,
+    val totalOverdueDaysCount: Int,
     val totalPenalty: String,
     val formula: String,
     val overdueDaysExplanation: String,
@@ -24,7 +25,6 @@ data class InitialSubmissionPenaltyDto(
     val overdueDaysCount: Int,
     val title: String,
     val summary: String,
-    val formula: String,
 )
 
 data class AllReportsRevisionPenaltyDto(
@@ -37,7 +37,6 @@ data class AllReportsRevisionPenaltyDto(
     val overdueDaysCount: Int,
     val title: String,
     val summary: String,
-    val formula: String,
     val explanation: String,
     val caseExplanation: String,
 )
@@ -67,5 +66,4 @@ data class StageCompletionPenaltyDto(
     val overdueDaysCount: Int,
     val title: String,
     val summary: String,
-    val formula: String,
 )

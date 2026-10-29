@@ -1,4 +1,4 @@
-const { name, productName, version } = require('./package.json');
+const { productName, version } = require('./package.json');
 
 module.exports = {
   appId: 'ru.inno_sc.penaltycalculation',
@@ -7,7 +7,7 @@ module.exports = {
   win: {
     target: 'zip',
     artifactName: 'penalty_calculation_service_${version}_win.${ext}',
-    executableName: `${name}-${version}`,
+    executableName: `Расчет неустойки версия ${version}`,
     extraResources: [
       { from: 'build/desktop/win32-x64' },
     ],
