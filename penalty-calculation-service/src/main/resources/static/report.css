@@ -4,7 +4,7 @@
   --border: #303030;
 }
 
-body { margin: 24px; color: #161616; font: 14px "Times New Roman", serif; }
+body { margin: 24px; padding-bottom: calc(var(--actions-height, 110px) + 24px); color: #161616; font: 14px "Times New Roman", serif; }
 h1 { margin: 0 0 24px; text-align: center; font-size: 21px; }
 .contract-number, .submission-dates label, .completion-dates label, .calculation-inputs label { display: grid; gap: 6px; width: 260px; }
 .contract-number { margin-bottom: 20px; }
@@ -20,6 +20,10 @@ h1 { margin: 0 0 24px; text-align: center; font-size: 21px; }
 .calculation-inputs small { line-height: 1.4; }
 .completion-dates { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
 .completion-dates[hidden] { display: none; }
+.editor-modes { display: flex; gap: 4px; margin-bottom: 20px; }
+.editor-modes [aria-pressed="true"] { font-weight: bold; background: var(--green); }
+#json-panel > label { font-weight: bold; }
+#json-editor { box-sizing: border-box; width: 100%; min-height: 55vh; padding: 12px; border: 1px solid var(--border); background: #f4f8fb; font: 13px/1.5 monospace; resize: vertical; }
 .tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
 .tabs button { border-bottom: 0; background: #edf2f6; }
 .tabs [aria-selected="true"] { background: var(--blue); font-weight: bold; box-shadow: inset 0 -3px var(--green); }
@@ -49,7 +53,11 @@ button:disabled { opacity: .6; cursor: wait; }
 .add-case { width: 100%; padding: 5px; border: 0; font-weight: bold; }
 .remove-case { padding: 3px; font-size: 12px; }
 .case-hint { margin: 8px 0 0; }
-.actions { display: flex; align-items: center; gap: 16px; margin-top: 20px; }
+.actions { position: fixed; right: 0; bottom: 0; left: 0; z-index: 20; display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; padding: 12px 24px; border-top: 1px solid var(--border); background: white; box-shadow: 0 -4px 16px #0001; }
+.calculation-date { display: grid; gap: 4px; width: 160px; }
+.calculation-date input { border-color: var(--border); background: var(--blue); }
+.actions output { flex: 1; min-width: 180px; align-self: center; }
+#test-case-buttons { display: flex; gap: 8px; margin-left: auto; }
 output { overflow-wrap: anywhere; }
 #calculation-result { margin-top: 28px; }
 #calculation-result h2 { margin: 0 0 12px; font-size: 20px; }
@@ -74,5 +82,6 @@ output { overflow-wrap: anywhere; }
 @media (max-width: 600px) {
   body { margin: 16px 12px; }
   h1 { font-size: 19px; }
-  .actions { align-items: flex-start; flex-direction: column; }
+  .actions { padding: 10px 12px; gap: 8px; }
+  .actions output { flex-basis: 100%; order: 1; }
 }

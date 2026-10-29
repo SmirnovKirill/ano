@@ -52,7 +52,7 @@ fun PenaltyCalculationResult.toDto(): PenaltyCalculationResultDto {
         ),
         totalPenalty = money(totalPenalty),
         formula = "Формула: сумма этапа × ключевая ставка ЦБ / 100 × число дней просрочки / 300. Каждая сумма округляется вверх до копейки.",
-        overdueDaysExplanation = "Календарные дни просрочки: со следующего дня после плановой даты. В пунктах 1 и 2 фактическая дата включается, явно заданные даты исключаются. В пункте 3 фактическая дата завершения работ не включается; список исключений не применяется.",
+        overdueDaysExplanation = "Календарные дни просрочки: со следующего дня после плановой даты. В пунктах 1 и 2 фактическая дата включается. В пункте 3 фактическая дата завершения работ не включается.",
         totalFormula = "${money(initialSubmissionPenalty.penalty)} + ${money(revisionsPenalty.totalPenalty)} + ${money(stageCompletionPenalty.penalty)} = ${money(totalPenalty)}",
     )
 }

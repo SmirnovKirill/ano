@@ -1,0 +1,79 @@
+{
+  "contractNumber": "Г-0014",
+  "stageAmount": "37793453.05",
+  "reportPlannedSubmissionDate": "26.09.2025",
+  "reportActualSubmissionDate": "26.09.2025",
+  "grantReport": {
+    "cases": [
+      {
+        "returnedForRevisionDate": "17.10.2025",
+        "actualSubmissionDate": "22.10.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "22.10.2025",
+        "actualSubmissionDate": "30.10.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "31.10.2025",
+        "actualSubmissionDate": "18.11.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "18.11.2025",
+        "actualSubmissionDate": "18.11.2025",
+        "remarksCorrected": true
+      }
+    ],
+    "reportApprovalDate": "01.12.2025"
+  },
+  "extraBudgetReport": {
+    "cases": [
+      {
+        "returnedForRevisionDate": "17.10.2025",
+        "actualSubmissionDate": "22.10.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "22.10.2025",
+        "actualSubmissionDate": "30.10.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "31.10.2025",
+        "actualSubmissionDate": "18.11.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "18.11.2025",
+        "actualSubmissionDate": "18.11.2025",
+        "remarksCorrected": true
+      }
+    ],
+    "reportApprovalDate": "01.12.2025"
+  },
+  "technicalReport": {
+    "cases": [
+      {
+        "returnedForRevisionDate": "15.10.2025",
+        "actualSubmissionDate": "18.11.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "21.11.2025",
+        "actualSubmissionDate": "24.11.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "24.11.2025",
+        "actualSubmissionDate": "24.11.2025",
+        "remarksCorrected": true
+      }
+    ],
+    "reportApprovalDate": "28.11.2025",
+    "plannedCompletionDate": "25.09.2025",
+    "actualCompletionDate": "13.10.2025"
+  },
+  "daysToExcludeManually": []
+}

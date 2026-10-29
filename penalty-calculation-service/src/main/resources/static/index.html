@@ -6,12 +6,19 @@
   <title>Расчет неустойки по этапу</title>
   <link rel="stylesheet" href="/report.css">
   <script src="/report.js" defer></script>
+  <script src="/request-data.js" defer></script>
+  <script src="/json-editor.js" defer></script>
   <script src="/test-data.js" defer></script>
 </head>
 <body>
 <main>
   <h1>Расчет неустойки по этапу</h1>
+  <div class="editor-modes" role="group" aria-label="Режим ввода">
+    <button id="form-mode" type="button" aria-pressed="true">Форма</button>
+    <button id="json-mode" type="button" aria-pressed="false">JSON</button>
+  </div>
   <form id="reports-form" novalidate>
+  <div id="form-editor">
   <label class="contract-number">Номер договора
     <span class="contract-input"><span>Г-00</span><input id="contract-number" name="contractNumber" inputmode="numeric" pattern="(0[1-9]|[1-7][0-9]|80)" maxlength="2" placeholder="01–80" aria-label="Номер договора от 01 до 80" required></span>
   </label>
@@ -100,10 +107,21 @@
       <button class="remove-excluded-date" type="button" aria-label="Удалить исключаемую дату">Удалить</button>
     </div>
   </template>
+  </div>
+  <div id="json-panel" hidden>
+    <label for="json-editor">Запрос на расчёт</label>
+    <p id="json-hint">Редактируйте запрос целиком. Даты — в формате дд.мм.гггг. Для переноса изменений переключитесь в форму.</p>
+    <textarea id="json-editor" rows="26" spellcheck="false" wrap="off" aria-describedby="json-hint"></textarea>
+  </div>
     <div class="actions">
+      <label class="calculation-date" for="calculationDate">Дата расчёта
+        <input id="calculationDate" name="calculationDate" data-date inputmode="numeric" placeholder="дд.мм.гггг" maxlength="10" required>
+      </label>
       <button id="submit-report" type="submit">Рассчитать</button>
       <button id="reset-form" type="reset">Очистить форму</button>
+      <button id="export-report" type="button">Скачать Excel</button>
       <output id="result" role="status" aria-live="polite"></output>
+      <div id="test-case-buttons" aria-label="Тестовые примеры"></div>
     </div>
   </form>
   <section id="calculation-result" aria-live="polite" hidden></section>

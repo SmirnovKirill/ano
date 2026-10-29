@@ -1,6 +1,10 @@
 package ru.inno_sc.penaltycalculation.service.controller
 
 import org.springframework.format.annotation.DateTimeFormat
+import org.springframework.http.ContentDisposition
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -11,18 +15,32 @@ import ru.inno_sc.penaltycalculation.api.reportrevision.ReportRevisionPlannedDat
 import ru.inno_sc.penaltycalculation.api.penalty.request.CalculatePenaltyRequestDto
 import ru.inno_sc.penaltycalculation.api.penalty.response.PenaltyCalculationResultDto
 import ru.inno_sc.penaltycalculation.service.converter.toDto
+import ru.inno_sc.penaltycalculation.service.service.PenaltyCalculationExcelService
 import ru.inno_sc.penaltycalculation.service.config.CommonConfig.Companion.DATE_PATTERN
 import ru.inno_sc.penaltycalculation.service.service.ReportRevisionPlannedDateService
 import ru.inno_sc.penaltycalculation.service.service.PenaltyCalculationService
 import java.time.LocalDate
+import java.nio.charset.StandardCharsets
 
 @RestController
 class ReportController(
     private val reportRevisionPlannedDateService: ReportRevisionPlannedDateService,
     private val penaltyCalculationService: PenaltyCalculationService,
+    private val penaltyCalculationExcelService: PenaltyCalculationExcelService,
 ) {
     @PostMapping(Paths.CALCULATE_PENALTY)
-    fun calculatePenalty(@RequestBody reports: CalculatePenaltyRequestDto): PenaltyCalculationResultDto = penaltyCalculationService.calculate(reports).toDto()
+    fun calculatePenalty(@RequestBody request: CalculatePenaltyRequestDto): PenaltyCalculationResultDto = penaltyCalculationService.calculate(request).toDto()
+
+    @PostMapping(Paths.EXPORT_PENALTY)
+    fun exportPenalty(@RequestBody request: CalculatePenaltyRequestDto): ResponseEntity<ByteArray> {
+        val calculation = penaltyCalculationService.calculate(request).toDto()
+        val xlsxBytes = penaltyCalculationExcelService.generate(request, calculation)
+        val fileName = "penalty_${request.contractNumber}_${request.calculationDate}.xlsx"
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(fileName, StandardCharsets.UTF_8).build().toString())
+            .body(xlsxBytes)
+    }
 
     @GetMapping(Paths.REPORT_REVISION_PLANNED_DATE)
     fun reportRevisionPlannedDate(

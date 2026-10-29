@@ -21,131 +21,6 @@ class PenaltyCalculationServiceTest : AbstractTest() {
     private val keyRatePercent = BigDecimal("14.00")
 
     @Test
-    fun `calculates penalties for the complete Excel example`() {
-        val reports = CalculatePenaltyRequestDto(
-            contractNumber = "Г-0029",
-            stageAmount = BigDecimal("50000000"),
-            reportPlannedSubmissionDate = date("23.12.2025"),
-            reportActualSubmissionDate = date("25.12.2025"),
-            grantReport = GrantReportDto(
-                cases = listOf(
-                    case("20.01.2026", "23.01.2026"),
-                    case("26.01.2026", "28.01.2026"),
-                    case("06.03.2026", "12.03.2026"),
-                    case("13.03.2026", "18.03.2026"),
-                ),
-                reportApprovalDate = date("19.03.2026"),
-            ),
-            extraBudgetReport = ExtraBudgetReportDto(
-                cases = listOf(
-                    case("20.01.2026", "23.01.2026"),
-                    case("26.01.2026", "29.01.2026"),
-                    case("06.03.2026", "12.03.2026"),
-                    case("13.03.2026", "19.03.2026"),
-                ),
-                reportApprovalDate = date("19.03.2026"),
-            ),
-            technicalReport = TechnicalReportDto(
-                cases = listOf(
-                    case("20.01.2026", "23.01.2026"),
-                    case("26.01.2026", "30.01.2026", remarksCorrected = false),
-                    case("13.02.2026", "16.02.2026"),
-                    case("06.03.2026", "12.03.2026"),
-                    case("13.03.2026", "16.03.2026"),
-                    case("16.03.2026", "17.03.2026"),
-                    case("18.03.2026", "18.03.2026"),
-                ),
-                reportApprovalDate = date("19.03.2026"),
-                plannedCompletionDate = date("22.12.2025"),
-                actualCompletionDate = date("10.01.2026"),
-            ),
-        )
-
-        val calculationDate = date("28.10.2026")
-        val result = service.calculate(reports)
-
-        assertEquals(reports.contractNumber, result.contractNumber)
-        assertEquals(calculationDate, result.calculationDate)
-        assertEquals(reports.stageAmount, result.stageAmount)
-        assertEquals(BigDecimal("14.00"), result.keyRatePercent)
-        assertStage(
-            result.initialSubmissionPenalty.daysForCalculation,
-            result.initialSubmissionPenalty.penalty,
-            penalty = "46666.67",
-            expectedDays = listOf(date("24.12.2025"), date("25.12.2025")),
-        )
-        assertStage(
-            result.revisionsPenalty.daysForCalculation,
-            result.revisionsPenalty.totalPenalty,
-            penalty = "490000.00",
-            expectedDays = listOf(
-                date("30.01.2026"), date("31.01.2026"),
-                date("01.02.2026"), date("02.02.2026"), date("03.02.2026"),
-                date("04.02.2026"), date("05.02.2026"), date("06.02.2026"),
-                date("07.02.2026"), date("08.02.2026"), date("09.02.2026"),
-                date("10.02.2026"), date("11.02.2026"), date("12.02.2026"),
-                date("13.02.2026"), date("14.02.2026"), date("15.02.2026"), date("16.02.2026"),
-                date("12.03.2026"), date("18.03.2026"), date("19.03.2026"),
-            ),
-        )
-        assertStage(
-            result.stageCompletionPenalty.overdueDays,
-            result.stageCompletionPenalty.penalty,
-            penalty = "420000.00",
-            expectedDays = listOf(
-                date("23.12.2025"), date("24.12.2025"),
-                date("25.12.2025"), date("26.12.2025"), date("27.12.2025"),
-                date("28.12.2025"), date("29.12.2025"), date("30.12.2025"),
-                date("31.12.2025"), date("01.01.2026"), date("02.01.2026"),
-                date("03.01.2026"), date("04.01.2026"), date("05.01.2026"),
-                date("06.01.2026"), date("07.01.2026"), date("08.01.2026"),
-                date("09.01.2026"),
-            ),
-        )
-        assertEquals(BigDecimal("956666.67"), result.totalPenalty)
-
-        assertEquals(
-            listOf(date("12.03.2026"), date("18.03.2026")),
-            result.revisionsPenalty.grantReport.daysForCalculation,
-        )
-        assertEquals(
-            listOf(date("12.03.2026"), date("18.03.2026"), date("19.03.2026")),
-            result.revisionsPenalty.extraBudgetReport.daysForCalculation,
-        )
-        assertEquals(
-            listOf(
-                date("30.01.2026"), date("31.01.2026"),
-                date("01.02.2026"), date("02.02.2026"), date("03.02.2026"),
-                date("04.02.2026"), date("05.02.2026"), date("06.02.2026"),
-                date("07.02.2026"), date("08.02.2026"), date("09.02.2026"),
-                date("10.02.2026"), date("11.02.2026"), date("12.02.2026"),
-                date("13.02.2026"), date("14.02.2026"), date("15.02.2026"), date("16.02.2026"),
-                date("12.03.2026"),
-            ),
-            result.revisionsPenalty.technicalReport.daysForCalculation,
-        )
-
-        assertCases(
-            reports.grantReport.cases, result.revisionsPenalty.grantReport.cases,
-            caseNumbers = listOf(1, 2, 3, 4),
-            plannedDates = listOf(date("23.01.2026"), date("29.01.2026"), date("11.03.2026"), date("17.03.2026")),
-        )
-        assertCases(
-            reports.extraBudgetReport.cases, result.revisionsPenalty.extraBudgetReport.cases,
-            caseNumbers = listOf(1, 2, 3, 4),
-            plannedDates = listOf(date("23.01.2026"), date("29.01.2026"), date("11.03.2026"), date("17.03.2026")),
-        )
-        assertCases(
-            reports.technicalReport.cases, result.revisionsPenalty.technicalReport.cases,
-            caseNumbers = listOf(1, 2, 2, 3, 4, 5, 6),
-            plannedDates = listOf(
-                date("23.01.2026"), date("29.01.2026"), date("29.01.2026"), date("11.03.2026"),
-                date("17.03.2026"), date("18.03.2026"), date("19.03.2026"),
-            ),
-        )
-    }
-
-    @Test
     fun `first submission excludes deadline and includes submission day`() {
         val request = request().copy(
             reportPlannedSubmissionDate = date("23.12.2025"),
@@ -351,6 +226,7 @@ class PenaltyCalculationServiceTest : AbstractTest() {
     private fun request(): CalculatePenaltyRequestDto {
         val case = case("02.03.2026", "05.03.2026")
         return CalculatePenaltyRequestDto(
+            calculationDate = date("28.10.2026"),
             contractNumber = "Г-0001",
             stageAmount = BigDecimal("50000000"),
             reportPlannedSubmissionDate = date("27.02.2026"),

@@ -14,6 +14,8 @@ import ru.inno_sc.penaltycalculation.api.penalty.request.ReportCaseDto
 import ru.inno_sc.penaltycalculation.api.penalty.request.TechnicalReportDto
 import ru.inno_sc.penaltycalculation.service.AbstractTest
 import ru.inno_sc.penaltycalculation.service.config.CommonConfig.Companion.DATE_FORMATTER
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.databind.node.ObjectNode
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -23,6 +25,9 @@ class PenaltyCalculationValidationTest : AbstractTest() {
 
     @Autowired
     private lateinit var reportRevisionPlannedDateService: ReportRevisionPlannedDateService
+
+    @Autowired
+    private lateinit var mapper: JsonMapper
 
     private val calculationDate = LocalDate.parse("28.10.2026", DATE_FORMATTER)
     private val submitted = LocalDate.parse("05.01.2026", DATE_FORMATTER)
@@ -39,6 +44,51 @@ class PenaltyCalculationValidationTest : AbstractTest() {
         assertEquals(listOf(1), result.revisionsPenalty.grantReport.cases.map { it.caseNumber })
         assertEquals(listOf(1), result.revisionsPenalty.extraBudgetReport.cases.map { it.caseNumber })
         assertEquals(listOf(1), result.revisionsPenalty.technicalReport.cases.map { it.caseNumber })
+    }
+
+    @Test
+    fun `requires calculation date in the JSON request`() {
+        for (explicitNull in listOf(false, true)) {
+            val json = mapper.readTree(mapper.writeValueAsString(request())) as ObjectNode
+            if (explicitNull) json.putNull("calculationDate") else json.remove("calculationDate")
+            val error = assertThrows(Exception::class.java) {
+                mapper.treeToValue(json, CalculatePenaltyRequestDto::class.java)
+            }
+            assertTrue(error.message.orEmpty().contains("calculationDate"), error.message)
+        }
+    }
+
+    @Test
+    fun `requires each completion date in the JSON request`() {
+        for (field in listOf("plannedCompletionDate", "actualCompletionDate")) {
+            val json = mapper.readTree(mapper.writeValueAsString(request())) as ObjectNode
+            (json.path("technicalReport") as ObjectNode).remove(field)
+            val error = assertThrows(Exception::class.java) {
+                mapper.treeToValue(json, CalculatePenaltyRequestDto::class.java)
+            }
+            assertTrue(error.message.orEmpty().contains(field), error.message)
+        }
+    }
+
+    @Test
+    fun `uses the requested calculation date for the key rate and result`() {
+        val request = request().copy(reportPlannedSubmissionDate = submitted.minusDays(1))
+
+        val historical = service.calculate(request.copy(calculationDate = revised))
+        val current = service.calculate(request)
+
+        assertEquals(revised, historical.calculationDate)
+        assertEquals(BigDecimal("16.00"), historical.keyRatePercent)
+        assertEquals(BigDecimal("53.34"), historical.initialSubmissionPenalty.penalty)
+        assertEquals(calculationDate, current.calculationDate)
+        assertEquals(BigDecimal("14.00"), current.keyRatePercent)
+        assertEquals(BigDecimal("46.67"), current.initialSubmissionPenalty.penalty)
+    }
+
+    @Test
+    fun `rejects a future calculation date and report events after calculation date`() {
+        rejects(request().copy(calculationDate = calculationDate.plusDays(1)), "Дата расчёта")
+        rejects(request().copy(calculationDate = submitted), "будущ")
     }
 
     @ParameterizedTest
@@ -143,6 +193,7 @@ class PenaltyCalculationValidationTest : AbstractTest() {
     }
 
     private fun request() = CalculatePenaltyRequestDto(
+        calculationDate = calculationDate,
         contractNumber = "Г-0001",
         stageAmount = BigDecimal("100000"),
         reportPlannedSubmissionDate = revised,

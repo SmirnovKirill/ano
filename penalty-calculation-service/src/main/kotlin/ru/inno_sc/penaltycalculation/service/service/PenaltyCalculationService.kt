@@ -21,9 +21,8 @@ class PenaltyCalculationService(
     private val clock: Clock,
 ) {
     fun calculate(reports: CalculatePenaltyRequestDto): PenaltyCalculationResult {
-        val calculationDate = LocalDate.now(clock)
-        validator.validate(reports, calculationDate)
-        val keyRatePercent = keyRates.rateOn(calculationDate)
+        validator.validate(reports, LocalDate.now(clock))
+        val keyRatePercent = keyRates.rateOn(reports.calculationDate)
 
         val initialSubmissionPenalty = calculateInitialSubmissionPenalty(reports, keyRatePercent)
         val revisionsPenalty = calculateAllReportsRevisionPenalty(reports, keyRatePercent)
@@ -31,7 +30,7 @@ class PenaltyCalculationService(
 
         return PenaltyCalculationResult(
             contractNumber = reports.contractNumber,
-            calculationDate = calculationDate,
+            calculationDate = reports.calculationDate,
             stageAmount = reports.stageAmount,
             keyRatePercent = keyRatePercent,
             initialSubmissionPenalty = initialSubmissionPenalty,

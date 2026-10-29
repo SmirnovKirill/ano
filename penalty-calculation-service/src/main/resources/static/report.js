@@ -12,7 +12,16 @@ const result = document.querySelector('#result');
 const calculationResult = document.querySelector('#calculation-result');
 const submit = document.querySelector('#submit-report');
 const loader = document.querySelector('#calculation-loader');
+const calculationDate = document.querySelector('#calculationDate');
 const plannedDateHint = template.querySelector('[data-planned-date]').textContent;
+function today() {
+  const date = new Date();
+  return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+}
+calculationDate.value = today();
+new ResizeObserver(() => document.documentElement.style.setProperty('--actions-height', `${document.querySelector('.actions').offsetHeight}px`))
+  .observe(document.querySelector('.actions'));
+
 function parseDate(value) {
   if (!/^\d{2}\.\d{2}\.\d{4}$/.test(value)) return null;
   const [day, month, year] = value.split('.').map(Number);
@@ -67,11 +76,14 @@ document.querySelector('.tabs').addEventListener('keydown', event => {
 });
 
 reportForm.addEventListener('input', ({ target }) => {
+  if (!target.matches('input')) return;
   if (target === contractNumber) target.value = target.value.replace(/\D/g, '').slice(0, 2);
   if (target === stageAmount) {
-    const value = target.value.replace(/\s/g, '');
+    let value = target.value.replace(/[^\d.,]/g, '');
+    const separator = value.search(/[.,]/);
+    if (separator !== -1) value = value.slice(0, separator + 1) + value.slice(separator + 1).replace(/[.,]/g, '').slice(0, 2);
     if (/^\d*(?:[.,]\d{0,2})?$/.test(value)) {
-      let remaining = target.value.slice(0, target.selectionStart).replace(/\s/g, '').length;
+      let remaining = target.value.slice(0, target.selectionStart).replace(/[^\d.,]/g, '').length;
       target.value = value.replace(/^\d+/, digits => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' '));
       let caret = 0;
       while (remaining > 0 && caret < target.value.length) {
@@ -113,6 +125,7 @@ excludedDateRows.addEventListener('click', ({ target }) => {
 });
 
 function clearCaseRow(row) {
+  delete row.dataset.requestCase;
   row.querySelectorAll('.case-cell input').forEach(input => {
     if (input.type === 'checkbox') input.checked = true;
     else input.value = '';
@@ -134,6 +147,7 @@ panels.forEach(panel => {
     const row = rows.insertRow();
     rows.rows[0].querySelectorAll('.case-cell').forEach(cell => row.append(cell.cloneNode(true)));
     clearCaseRow(row);
+    row.dataset.requestCase = 'true';
     updateCaseNumbers(panel);
     updatePanelPlannedDates(panel);
     rows.querySelectorAll('.shared').forEach(cell => cell.rowSpan = rows.rows.length);
@@ -162,6 +176,7 @@ reportForm.addEventListener('reset', event => {
   event.preventDefault();
   reportForm.querySelectorAll('[data-planned-date]').forEach(cell => cell.calculationRequest = null);
   panels.forEach(panel => {
+    delete panel.dataset.requestReport;
     const rows = panel.querySelector('tbody');
     [...rows.rows].slice(1).forEach(row => row.remove());
     clearCaseRow(rows.rows[0]);
@@ -172,6 +187,7 @@ reportForm.addEventListener('reset', event => {
     if (input.type !== 'checkbox' && !input.readOnly) input.value = '';
     input.setCustomValidity('');
   });
+  calculationDate.value = today();
   excludedDateRows.replaceChildren();
   result.textContent = '';
   calculationResult.replaceChildren();
@@ -183,7 +199,12 @@ reportForm.addEventListener('reset', event => {
 function validateForm() {
   contractNumber.setCustomValidity(/^(0[1-9]|[1-7][0-9]|80)$/.test(contractNumber.value) ? '' : 'Введите номер от 01 до 80.');
   stageAmount.setCustomValidity(/^\d+([.,]\d{1,2})?$/.test(stageAmount.value.replace(/\s/g, '')) ? '' : 'Укажите сумму с точностью до двух знаков после запятой.');
-  reportForm.querySelectorAll('[data-date]').forEach(input => input.setCustomValidity(input.required || input.value ? dateError(input.value) : ''));
+  const asOf = parseDate(calculationDate.value);
+  reportForm.querySelectorAll('[data-date]').forEach(input => {
+    let error = input.required || input.value ? dateError(input.value) : '';
+    if (!error && input.value && input !== calculationDate && asOf && parseDate(input.value) > asOf) error = 'Дата не может быть позже даты расчёта.';
+    input.setCustomValidity(error);
+  });
   reportForm.querySelectorAll('[data-field="remarksCorrected"]').forEach(input => input.setCustomValidity(''));
   const submitted = submissionDates.querySelector('[name="reportActualSubmissionDate"]');
   const notBefore = (input, previous, message) => {
@@ -276,16 +297,6 @@ async function updatePlannedDate(input) {
   }
 }
 
-function reportData(panel) {
-  const data = Object.fromEntries([...panel.querySelectorAll('[name][data-date]')].map(input => [input.name, input.value]));
-  data.cases = [...panel.querySelector('tbody').rows].map(row => ({
-    returnedForRevisionDate: row.querySelector('[data-field="returnedForRevisionDate"]').value,
-    actualSubmissionDate: row.querySelector('[data-field="actualSubmissionDate"]').value,
-    remarksCorrected: row.querySelector('[data-field="remarksCorrected"]').checked,
-  }));
-  return data;
-}
-
 function appendRow(parent, values, heading = false) {
   const row = document.createElement('tr');
   values.forEach(value => {
@@ -319,6 +330,7 @@ function appendTable(parent, label, headings, rows) {
 }
 
 function overdueDaySteps(item) {
+  if (!item.daysToExcludeManually.length) return [`Дни просрочки (${item.overdueDays.length}): ${item.daysForCalculation}.`];
   return [
     `Исходные дни (${item.overdueDays.length}): ${item.overdueDays.join(', ') || 'нет'}.`,
     `Исключены вручную (${item.daysToExcludeManually.length}): ${item.daysToExcludeManually.join(', ') || 'нет'}.`,
@@ -344,18 +356,18 @@ function renderCalculation(data) {
       appendTable(section, 'Доработка каждого отчёта', ['Отчёт', 'Расчёт дней просрочки', 'Дни'],
         reports.map(report => [report.name, overdueDaySteps(report).join('\n'), report.overdueDaysCount]));
     }
-    if (stage !== data.stageCompletionPenalty) {
+    if (stage !== data.stageCompletionPenalty && stage.daysToExcludeManually.length) {
       const steps = document.createElement('ol');
       steps.className = 'exclusion-steps';
       overdueDaySteps(stage).forEach(step => steps.append(textElement('li', step)));
       section.append(steps);
+    } else if (stage !== data.stageCompletionPenalty) {
+      section.append(textElement('p', overdueDaySteps(stage)[0], 'overdue-days'));
     } else {
       section.append(textElement('p', `Конкретные дни: ${stage.overdueDays}`, 'overdue-days'));
     }
-    section.append(
-      textElement('p', stage.summary, 'penalty-subtotal'),
-      textElement('p', stage.formula, 'penalty-formula'),
-    );
+    section.append(textElement('p', stage.summary, 'penalty-subtotal'));
+    if (stage.formula) section.append(textElement('p', stage.formula, 'penalty-formula'));
     if (stage === data.revisionsPenalty) {
       const reports = [stage.grantReport, stage.extraBudgetReport, stage.technicalReport];
       section.append(textElement('p', stage.explanation));
@@ -380,22 +392,8 @@ function renderCalculation(data) {
 
 reportForm.addEventListener('submit', async event => {
   event.preventDefault();
-  contractNumber.value = contractNumber.value.trim();
-  validateForm();
-  const invalid = reportForm.querySelector('input:invalid');
-  if (invalid) {
-    const panel = invalid.closest('[role="tabpanel"]');
-    if (panel) tabs[panels.indexOf(panel)].click();
-    invalid.reportValidity();
-    return;
-  }
-  const data = {
-    contractNumber: `Г-00${contractNumber.value}`,
-    stageAmount: stageAmount.value.replace(/\s/g, '').replace(',', '.'),
-    daysToExcludeManually: [...excludedDateRows.querySelectorAll('input')].map(input => input.value).filter(Boolean),
-    ...Object.fromEntries([...submissionDates.querySelectorAll('[name]')].map(input => [input.name, input.value])),
-  };
-  panels.forEach(panel => data[`${panel.dataset.report}Report`] = reportData(panel));
+  const data = validatedRequest();
+  if (!data) return;
   submit.disabled = true;
   result.textContent = '';
   calculationResult.hidden = true;
@@ -418,5 +416,39 @@ reportForm.addEventListener('submit', async event => {
   } finally {
     loader.close();
     submit.disabled = false;
+  }
+});
+
+document.querySelector('#export-report').addEventListener('click', async event => {
+  const data = validatedRequest();
+  if (!data) return;
+  const button = event.currentTarget;
+  button.disabled = true;
+  result.textContent = 'Готовим Excel…';
+  try {
+    const response = await fetch('/api/reports/penalty-calculation/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw Error(error.detail || 'Не удалось выгрузить расчёт.');
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = url;
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    link.download = encodedName ? decodeURIComponent(encodedName) : disposition.match(/filename="?([^";]+)"?/i)?.[1] || 'penalty_calculation.xlsx';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    result.textContent = 'Файл XLSX подготовлен.';
+  } catch (error) {
+    result.textContent = error.message;
+  } finally {
+    button.disabled = false;
   }
 });

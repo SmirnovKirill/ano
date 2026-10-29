@@ -65,6 +65,15 @@ async function start() {
   window.webContents.on('will-redirect', localOnly);
   window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   window.webContents.session.setPermissionCheckHandler(() => false);
+  window.webContents.session.on('will-download', (_event, item) => {
+    if (item.getFilename().endsWith('.xlsx')) {
+      item.setSaveDialogOptions({
+        title: 'Сохранить расчёт',
+        defaultPath: path.join(app.getPath('downloads'), item.getFilename()),
+        filters: [{ name: 'Excel', extensions: ['xlsx'] }],
+      });
+    }
+  });
   window.webContents.session.webRequest.onHeadersReceived((details, callback) => callback({
     responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",

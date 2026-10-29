@@ -6,6 +6,7 @@ import java.time.LocalDate
 data class CalculatePenaltyRequestDto(
     val contractNumber: String,
     val stageAmount: BigDecimal,
+    val calculationDate: LocalDate,
     val reportPlannedSubmissionDate: LocalDate,
     val reportActualSubmissionDate: LocalDate,
     val grantReport: GrantReportDto,

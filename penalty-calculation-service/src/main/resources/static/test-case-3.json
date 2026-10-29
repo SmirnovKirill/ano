@@ -1,0 +1,132 @@
+{
+  "contractNumber": "Г-0042",
+  "stageAmount": "145000000",
+  "reportPlannedSubmissionDate": "27.09.2024",
+  "reportActualSubmissionDate": "27.09.2024",
+  "grantReport": {
+    "cases": [
+      {
+        "returnedForRevisionDate": "03.10.2024",
+        "actualSubmissionDate": "10.10.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "14.11.2024",
+        "actualSubmissionDate": "19.11.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "19.12.2024",
+        "actualSubmissionDate": "23.12.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "23.12.2024",
+        "actualSubmissionDate": "23.12.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "13.01.2025",
+        "actualSubmissionDate": "16.01.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "05.02.2025",
+        "actualSubmissionDate": "05.02.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "11.02.2025",
+        "actualSubmissionDate": "21.02.2025",
+        "remarksCorrected": true
+      }
+    ],
+    "reportApprovalDate": "21.02.2025"
+  },
+  "extraBudgetReport": {
+    "cases": [
+      {
+        "returnedForRevisionDate": "03.10.2024",
+        "actualSubmissionDate": "09.10.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "14.11.2024",
+        "actualSubmissionDate": "19.11.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "19.12.2024",
+        "actualSubmissionDate": "23.12.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "14.01.2025",
+        "actualSubmissionDate": "16.01.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "05.02.2025",
+        "actualSubmissionDate": "05.02.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "11.02.2025",
+        "actualSubmissionDate": "21.02.2025",
+        "remarksCorrected": true
+      }
+    ],
+    "reportApprovalDate": "21.02.2025"
+  },
+  "technicalReport": {
+    "cases": [
+      {
+        "returnedForRevisionDate": "04.10.2024",
+        "actualSubmissionDate": "10.10.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "24.10.2024",
+        "actualSubmissionDate": "29.10.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "01.11.2024",
+        "actualSubmissionDate": "05.11.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "11.11.2024",
+        "actualSubmissionDate": "13.11.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "22.11.2024",
+        "actualSubmissionDate": "26.11.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "27.12.2024",
+        "actualSubmissionDate": "27.12.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "27.12.2024",
+        "actualSubmissionDate": "27.12.2024",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "13.01.2025",
+        "actualSubmissionDate": "13.01.2025",
+        "remarksCorrected": true
+      },
+      {
+        "returnedForRevisionDate": "28.02.2025",
+        "actualSubmissionDate": "28.02.2025",
+        "remarksCorrected": true
+      }
+    ],
+    "reportApprovalDate": "04.03.2025"
+  },
+  "daysToExcludeManually": []
+}

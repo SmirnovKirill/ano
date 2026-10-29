@@ -5,21 +5,22 @@ import ru.inno_sc.penaltycalculation.api.penalty.request.ReportCaseDto
 import java.time.LocalDate
 
 class PenaltyCalculationValidator {
-    fun validate(request: CalculatePenaltyRequestDto, calculationDate: LocalDate) {
+    fun validate(request: CalculatePenaltyRequestDto, today: LocalDate) {
+        validateDateNotFuture(request.calculationDate, "Дата расчёта", today)
         require(request.contractNumber.matches(Regex("Г-00(0[1-9]|[1-7][0-9]|80)"))) {
             "Укажите номер договора от Г-0001 до Г-0080."
         }
         require(request.stageAmount.signum() >= 0) { "Сумма этапа не может быть отрицательной." }
-        validateDateNotFuture(request.reportPlannedSubmissionDate, "Плановая дата подачи отчётности", calculationDate)
-        validateDateNotFuture(request.reportActualSubmissionDate, "Фактическая дата подачи отчётности", calculationDate)
+        validateDateNotFuture(request.reportPlannedSubmissionDate, "Плановая дата подачи отчётности", request.calculationDate)
+        validateDateNotFuture(request.reportActualSubmissionDate, "Фактическая дата подачи отчётности", request.calculationDate)
 
         val technical = request.technicalReport
-        validateReport("Грант", request.grantReport.cases, request.grantReport.reportApprovalDate, request.reportActualSubmissionDate, calculationDate)
-        validateReport("Внебюджет", request.extraBudgetReport.cases, request.extraBudgetReport.reportApprovalDate, request.reportActualSubmissionDate, calculationDate)
+        validateReport("Грант", request.grantReport.cases, request.grantReport.reportApprovalDate, request.reportActualSubmissionDate, request.calculationDate)
+        validateReport("Внебюджет", request.extraBudgetReport.cases, request.extraBudgetReport.reportApprovalDate, request.reportActualSubmissionDate, request.calculationDate)
 
-        validateReport("Тех", technical.cases, technical.reportApprovalDate, request.reportActualSubmissionDate, calculationDate)
-        validateDateNotFuture(technical.plannedCompletionDate, "Плановая дата завершения работ", calculationDate)
-        validateDateNotFuture(technical.actualCompletionDate, "Фактическая дата завершения работ", calculationDate)
+        validateReport("Тех", technical.cases, technical.reportApprovalDate, request.reportActualSubmissionDate, request.calculationDate)
+        validateDateNotFuture(technical.plannedCompletionDate, "Плановая дата завершения работ", request.calculationDate)
+        validateDateNotFuture(technical.actualCompletionDate, "Фактическая дата завершения работ", request.calculationDate)
     }
 
     private fun validateReport(name: String, cases: List<ReportCaseDto>, reportApprovalDate: LocalDate, submitted: LocalDate, calculationDate: LocalDate) {
