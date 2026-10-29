@@ -43,12 +43,20 @@ class PenaltyCalculationExcelServiceTest : AbstractTest() {
             assertEquals("14%", value("Ключевая ставка").stringCellValue)
             assertEquals("956\u00a0666,67\u00a0₽", value("Итого").stringCellValue)
             assertEquals(CellType.STRING, value("Итого").cellType)
+            assertEquals("24.12.2025, 25.12.2025", value("Дни просрочки (2)").stringCellValue)
+            val dayRow = summary.first { it.getCell(0)?.stringCellValue == "Дни просрочки (2)" }
+            assertTrue(workbook.getFontAt(dayRow.getCell(0).cellStyle.fontIndex).bold)
+            assertFalse(workbook.getFontAt(dayRow.getCell(1).cellStyle.fontIndex).bold)
+            val totalDays = summary.first { it.getCell(0)?.stringCellValue == "Всего дней просрочки" }
+            assertTrue(workbook.getFontAt(totalDays.getCell(0).cellStyle.fontIndex).bold)
+            assertEquals(0, summary.getRow(totalDays.rowNum - 1).physicalNumberOfCells)
+            assertFalse(workbook.any { sheet -> sheet.any { it.getCell(0)?.stringCellValue in listOf("Дней просрочки", "Пояснение") } })
 
             val grant = workbook.getSheet("Грант")
             val header = grant.first { it.getCell(0)?.stringCellValue == "Кейс" }
             val firstCase = grant.getRow(header.rowNum + 1)
-            assertEquals(listOf("1", "20.01.2026", "23.01.2026", "23.01.2026", "Исправлены", "Нет просрочки"), firstCase.map { it.stringCellValue })
-            assertFalse(workbook.flatMap { sheet -> sheet.flatMap { row -> row.map { it.stringCellValue } } }.any { it.startsWith("Исходные дни:") })
+            assertEquals(listOf("1", "20.01.2026", "23.01.2026", "23.01.2026", "Исправлены", "Дни просрочки (0): нет"), firstCase.map { it.stringCellValue })
+            assertFalse(workbook.flatMap { sheet -> sheet.flatMap { row -> row.map { it.stringCellValue } } }.any { it.startsWith("Исходные дни просрочки") })
         }
     }
 
@@ -76,14 +84,16 @@ class PenaltyCalculationExcelServiceTest : AbstractTest() {
         )) {
             val response = controller.exportPenalty(request.copy(daysToExcludeManually = dates))
             XSSFWorkbook(ByteArrayInputStream(requireNotNull(response.body))).use { workbook ->
-                val text = workbook.flatMap { sheet -> sheet.flatMap { row -> row.map { it.stringCellValue } } }
-                val steps = text.filter { it.startsWith("Исходные дни:") }
+                val rows = workbook.flatMap { sheet -> sheet.toList() }
+                val steps = rows.filter { it.getCell(0)?.stringCellValue?.startsWith("Исходные дни просрочки") == true }
                 assertEquals(expectedTrace, steps.isNotEmpty())
                 if (expectedTrace) {
                     assertEquals(1, steps.size)
-                    assertTrue(steps.single().contains("Исходные дни: 24.12.2025, 25.12.2025"))
-                    assertTrue(steps.single().contains("Исключены вручную: 24.12.2025"))
-                    assertTrue(steps.single().contains("Для расчёта: 25.12.2025"))
+                    val original = steps.single()
+                    val sheet = original.sheet
+                    assertEquals(listOf("Исходные дни просрочки (2)", "24.12.2025, 25.12.2025"), original.map { it.stringCellValue })
+                    assertEquals(listOf("Исключены вручную (1)", "24.12.2025"), sheet.getRow(original.rowNum + 1).map { it.stringCellValue })
+                    assertEquals(listOf("Дни просрочки (1)", "25.12.2025"), sheet.getRow(original.rowNum + 2).map { it.stringCellValue })
                 }
             }
         }

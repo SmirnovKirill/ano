@@ -308,7 +308,8 @@ function appendRow(parent, values, heading = false) {
   values.forEach(value => {
     const cell = document.createElement(heading ? 'th' : 'td');
     if (heading) cell.scope = 'col';
-    cell.textContent = value;
+    if (value instanceof Node) cell.append(value);
+    else cell.textContent = value;
     row.append(cell);
   });
   parent.append(row);
@@ -335,13 +336,24 @@ function appendTable(parent, label, headings, rows) {
   parent.append(scroll);
 }
 
-function overdueDaySteps(item) {
-  if (!item.daysToExcludeManually.length) return [`Дни просрочки (${item.overdueDays.length}): ${item.daysForCalculation}.`];
-  return [
-    `Исходные дни (${item.overdueDays.length}): ${item.overdueDays.join(', ') || 'нет'}.`,
-    `Исключены вручную (${item.daysToExcludeManually.length}): ${item.daysToExcludeManually.join(', ') || 'нет'}.`,
-    `Остались для расчёта: ${item.daysForCalculation}.`,
-  ];
+function dayLine(label, count, dates) {
+  const line = textElement('p', '');
+  line.append(textElement('strong', `${label} (${count}): `), document.createTextNode(dates || 'нет'));
+  return line;
+}
+
+function overdueDaysBlock(item) {
+  const block = textElement('div', '', 'overdue-days');
+  const excluded = item.daysToExcludeManually ?? [];
+  if (excluded.length) {
+    block.append(
+      dayLine('Исходные дни просрочки', item.overdueDays.length, item.overdueDays.join(', ')),
+      dayLine('Исключены вручную', excluded.length, excluded.join(', ')),
+    );
+  }
+  block.append(dayLine('Дни просрочки', item.overdueDaysCount ?? item.overdueDays.length - excluded.length,
+    item.daysForCalculation ?? item.overdueDays));
+  return block;
 }
 
 function renderCalculation(data) {
@@ -349,7 +361,6 @@ function renderCalculation(data) {
   calculationResult.append(
     textElement('h2', `Расчёт по договору ${data.contractNumber}, этап ${data.stageNumber}`),
     textElement('p', `Дата расчёта: ${data.calculationDate}. Сумма этапа: ${data.stageAmount}. Ключевая ставка ЦБ: ${data.keyRatePercent} на дату расчёта.`),
-    textElement('p', data.overdueDaysExplanation),
   );
   [data.initialSubmissionPenalty, data.revisionsPenalty, data.stageCompletionPenalty].forEach(stage => {
     const section = document.createElement('section');
@@ -357,20 +368,10 @@ function renderCalculation(data) {
     section.append(textElement('h3', stage.title));
     if (stage === data.revisionsPenalty) {
       const reports = [stage.grantReport, stage.extraBudgetReport, stage.technicalReport];
-      appendTable(section, 'Доработка каждого отчёта', ['Отчёт', 'Расчёт дней просрочки', 'Дни'],
-        reports.map(report => [report.name, overdueDaySteps(report).join('\n'), report.overdueDaysCount]));
+      appendTable(section, 'Доработка каждого отчёта', ['Отчёт', 'Дни просрочки'],
+        reports.map(report => [report.name, overdueDaysBlock(report)]));
     }
-    if (stage !== data.stageCompletionPenalty && stage.daysToExcludeManually.length) {
-      const steps = document.createElement('ol');
-      steps.className = 'exclusion-steps';
-      overdueDaySteps(stage).forEach(step => steps.append(textElement('li', step)));
-      section.append(steps);
-    } else if (stage !== data.stageCompletionPenalty) {
-      section.append(textElement('p', overdueDaySteps(stage)[0], 'overdue-days'));
-    } else {
-      section.append(textElement('p', `Конкретные дни: ${stage.overdueDays}`, 'overdue-days'));
-    }
-    section.append(textElement('p', stage.summary, 'penalty-subtotal'));
+    section.append(overdueDaysBlock(stage));
     if (stage === data.revisionsPenalty) {
       const reports = [stage.grantReport, stage.extraBudgetReport, stage.technicalReport];
       section.append(textElement('p', stage.explanation));
@@ -383,17 +384,20 @@ function renderCalculation(data) {
         reports.flatMap(report => report.cases.map(item => [
           report.name, item.caseNumber, item.returnedForRevisionDate,
           item.plannedSubmissionDate, item.actualSubmissionDate,
-          item.remarks, overdueDaySteps(item).join('\n'),
+          item.remarks, overdueDaysBlock(item),
         ])));
       section.append(details);
     }
     calculationResult.append(section);
   });
-  calculationResult.append(
-    textElement('p', `Всего дней просрочки: ${data.totalOverdueDaysCount}.`),
+  const total = textElement('section', '', 'calculation-summary');
+  total.setAttribute('aria-label', 'Итоговый расчёт');
+  total.append(
+    textElement('p', `Всего дней просрочки: ${data.totalOverdueDaysCount}.`, 'total-days'),
     textElement('p', data.formula),
     textElement('p', `Итоговая неустойка: ${data.totalFormula}`, 'penalty-total'),
   );
+  calculationResult.append(total);
   calculationResult.hidden = false;
 }
 

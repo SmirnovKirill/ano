@@ -68,10 +68,11 @@ output { overflow-wrap: anywhere; }
 #calculation-result h3 { margin: 0 0 12px; font-size: 17px; }
 #calculation-result .penalty-stage { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
 #calculation-result .penalty-total { font-size: 18px; font-weight: bold; }
-#calculation-result .penalty-subtotal { font-weight: bold; }
 #calculation-result .overdue-days { line-height: 1.6; overflow-wrap: anywhere; }
-#calculation-result .exclusion-steps { padding-left: 24px; line-height: 1.6; overflow-wrap: anywhere; }
-#calculation-result .exclusion-steps li { margin: 6px 0; }
+#calculation-result .overdue-days p { margin: 6px 0; }
+#calculation-result .calculation-summary { margin-top: 28px; padding: 16px 20px; border: 1px solid #c7d3db; border-left: 4px solid #8095a4; border-radius: 6px; background: #f4f8fb; }
+#calculation-result .total-days { margin: 0 0 12px; font-size: 18px; font-weight: bold; }
+#calculation-result .calculation-summary .penalty-total { margin-bottom: 0; }
 #calculation-result table { min-width: 680px; background: #f4f8fb; }
 #calculation-result th:first-child { width: 24%; }
 #calculation-result td { white-space: pre-line; }

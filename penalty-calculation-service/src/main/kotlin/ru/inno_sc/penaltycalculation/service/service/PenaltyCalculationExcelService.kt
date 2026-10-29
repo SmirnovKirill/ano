@@ -1,6 +1,7 @@
 package ru.inno_sc.penaltycalculation.service.service
 
 import org.apache.poi.ss.usermodel.CellStyle
+import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.VerticalAlignment
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
@@ -35,16 +36,16 @@ class PenaltyCalculationExcelService {
         row(summary, textStyle, "Фактическая подача отчётности", request.reportActualSubmissionDate.format(DATE_FORMATTER))
         row(summary, textStyle, "Плановое завершение работ", request.technicalReport.plannedCompletionDate.format(DATE_FORMATTER))
         row(summary, textStyle, "Фактическое завершение работ", request.technicalReport.actualCompletionDate.format(DATE_FORMATTER))
-        row(summary, textStyle, "Правила подсчёта дней", result.overdueDaysExplanation)
         result.initialSubmissionPenalty.let {
-            stage(summary, textStyle, headingStyle, it.title, it.summary, it.daysForCalculation, it.overdueDays, it.daysToExcludeManually)
+            stage(summary, textStyle, headingStyle, it.title, it.daysForCalculation, it.overdueDaysCount, it.overdueDays, it.daysToExcludeManually)
         }
         result.revisionsPenalty.let {
-            stage(summary, textStyle, headingStyle, it.title, it.summary, it.daysForCalculation, it.overdueDays, it.daysToExcludeManually)
+            stage(summary, textStyle, headingStyle, it.title, it.daysForCalculation, it.overdueDaysCount, it.overdueDays, it.daysToExcludeManually)
             row(summary, textStyle, "Правило доработки", it.explanation)
         }
-        result.stageCompletionPenalty.let { stage(summary, textStyle, headingStyle, it.title, it.summary, it.overdueDays) }
-        row(summary, textStyle, "Всего дней просрочки", result.totalOverdueDaysCount.toString())
+        result.stageCompletionPenalty.let { stage(summary, textStyle, headingStyle, it.title, it.overdueDays, it.overdueDaysCount) }
+        row(summary, textStyle)
+        row(summary, headingStyle, "Всего дней просрочки", result.totalOverdueDaysCount.toString())
         row(summary, textStyle, "Формула", result.formula)
         row(summary, textStyle, "Итоговый расчёт", result.totalFormula)
         row(summary, headingStyle, "Итого", result.totalPenalty)
@@ -58,7 +59,7 @@ class PenaltyCalculationExcelService {
         }
     }
 
-    private fun row(sheet: Sheet, style: CellStyle, vararg values: String) {
+    private fun row(sheet: Sheet, style: CellStyle, vararg values: String): Row {
         val row = sheet.createRow(sheet.physicalNumberOfRows)
         values.forEachIndexed { index, value ->
             row.createCell(index).apply {
@@ -71,27 +72,47 @@ class PenaltyCalculationExcelService {
             value.lines().sumOf { (it.length + width - 1).div(width).coerceAtLeast(1) }
         }.maxOrNull() ?: 1
         row.heightInPoints = (lines * 15f + 5).coerceAtMost(400f)
+        return row
     }
 
     private fun days(values: List<LocalDate>): String = values.joinToString(", ") { it.format(DATE_FORMATTER) }
 
-    private fun daySteps(overdueDays: List<LocalDate>, daysToExcludeManually: List<LocalDate>, daysForCalculation: String): String =
-        if (daysToExcludeManually.isEmpty()) daysForCalculation else
-            "Исходные дни: ${days(overdueDays)}\nИсключены вручную: ${days(daysToExcludeManually)}\nДля расчёта: $daysForCalculation"
+    private fun daySteps(
+        overdueDays: List<LocalDate>,
+        daysToExcludeManually: List<LocalDate>,
+        daysForCalculation: String,
+        count: Int = overdueDays.size - daysToExcludeManually.size,
+    ): List<Pair<String, String>> = (if (daysToExcludeManually.isEmpty()) emptyList() else listOf(
+        "Исходные дни просрочки (${overdueDays.size})" to days(overdueDays),
+        "Исключены вручную (${daysToExcludeManually.size})" to days(daysToExcludeManually),
+    )) + ("Дни просрочки ($count)" to daysForCalculation)
+
+    private fun dayRows(
+        sheet: Sheet,
+        textStyle: CellStyle,
+        headingStyle: CellStyle,
+        daysForCalculation: String,
+        count: Int,
+        overdueDays: List<LocalDate>,
+        daysToExcludeManually: List<LocalDate>,
+    ) {
+        daySteps(overdueDays, daysToExcludeManually, daysForCalculation, count).forEach { (label, dates) ->
+            row(sheet, textStyle, label, dates).getCell(0).cellStyle = headingStyle
+        }
+    }
 
     private fun stage(
         sheet: Sheet,
         textStyle: CellStyle,
         headingStyle: CellStyle,
         title: String,
-        summary: String,
         daysForCalculation: String,
+        count: Int,
         overdueDays: List<LocalDate> = emptyList(),
         daysToExcludeManually: List<LocalDate> = emptyList(),
     ) {
         row(sheet, headingStyle, title)
-        row(sheet, textStyle, "Дни просрочки", daySteps(overdueDays, daysToExcludeManually, daysForCalculation))
-        row(sheet, textStyle, "Пояснение", summary)
+        dayRows(sheet, textStyle, headingStyle, daysForCalculation, count, overdueDays, daysToExcludeManually)
     }
 
     private fun report(
@@ -106,12 +127,12 @@ class PenaltyCalculationExcelService {
         listOf(9, 18, 18, 18, 42, 85).forEachIndexed { index, width -> sheet.setColumnWidth(index, width * 256) }
         row(sheet, headingStyle, report.name)
         row(sheet, textStyle, "Дата согласования", approvalDate.format(DATE_FORMATTER))
-        row(sheet, textStyle, "Дней просрочки", report.overdueDaysCount.toString())
-        row(sheet, textStyle, "Дни просрочки", daySteps(report.overdueDays, report.daysToExcludeManually, report.daysForCalculation))
+        dayRows(sheet, textStyle, headingStyle, report.daysForCalculation, report.overdueDaysCount, report.overdueDays, report.daysToExcludeManually)
         row(sheet, headingStyle, "Кейс", "Возврат на доработку", "Плановая подача", "Фактическая подача", "Замечания", "Дни просрочки")
         report.cases.forEach { case ->
             row(sheet, textStyle, case.caseNumber.toString(), case.returnedForRevisionDate, case.plannedSubmissionDate,
-                case.actualSubmissionDate, case.remarks, daySteps(case.overdueDays, case.daysToExcludeManually, case.daysForCalculation))
+                case.actualSubmissionDate, case.remarks, daySteps(case.overdueDays, case.daysToExcludeManually, case.daysForCalculation)
+                    .joinToString("\n") { (label, dates) -> "$label: $dates" })
         }
     }
 }

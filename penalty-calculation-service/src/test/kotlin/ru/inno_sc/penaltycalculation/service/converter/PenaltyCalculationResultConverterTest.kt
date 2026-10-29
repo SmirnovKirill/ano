@@ -2,7 +2,6 @@ package ru.inno_sc.penaltycalculation.service.converter
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import ru.inno_sc.penaltycalculation.service.AbstractTest
@@ -33,7 +32,6 @@ class PenaltyCalculationResultConverterTest : AbstractTest() {
         assertEquals("05.03.2026", dto.revisionsPenalty.daysForCalculation)
         assertEquals(1, dto.totalOverdueDaysCount)
         assertEquals("23\u00a0333,34\u00a0₽", dto.totalPenalty)
-        assertEquals("Уникальных дней просрочки: 1.", dto.revisionsPenalty.summary)
         assertEquals("50\u00a0000\u00a0000,00\u00a0₽ × 14 / 100 × (0 + 1 + 0) / 300 = 23\u00a0333,34\u00a0₽", dto.totalFormula)
         assertEquals(1, dto.revisionsPenalty.grantReport.overdueDaysCount)
         assertEquals(1, dto.revisionsPenalty.extraBudgetReport.overdueDaysCount)
@@ -61,9 +59,9 @@ class PenaltyCalculationResultConverterTest : AbstractTest() {
         assertEquals("09.03.2026", cases.last().actualSubmissionDate)
         assertEquals("06.03.2026, 07.03.2026, 08.03.2026, 09.03.2026", cases.last().daysForCalculation)
         assertEquals(4, dto.revisionsPenalty.grantReport.overdueDaysCount)
-        assertEquals("Нет просрочки", dto.revisionsPenalty.extraBudgetReport.daysForCalculation)
+        assertEquals("нет", dto.revisionsPenalty.extraBudgetReport.daysForCalculation)
         assertEquals(0, dto.revisionsPenalty.extraBudgetReport.overdueDaysCount)
-        assertEquals("Нет просрочки", dto.initialSubmissionPenalty.daysForCalculation)
+        assertEquals("нет", dto.initialSubmissionPenalty.daysForCalculation)
     }
 
     @Test
@@ -92,12 +90,12 @@ class PenaltyCalculationResultConverterTest : AbstractTest() {
         assertEquals(3, dto.totalOverdueDaysCount)
         assertEquals("0,01\u00a0₽", dto.totalPenalty)
         assertEquals("1,00\u00a0₽ × 14 / 100 × (1 + 1 + 1) / 300 = 0,01\u00a0₽", dto.totalFormula)
-        assertTrue(dto.formula.contains("один раз"))
         for (name in listOf("initialSubmissionPenalty", "revisionsPenalty", "stageCompletionPenalty")) {
             val section = json.path(name)
             assertFalse(section.has("penalty"), name)
             assertFalse(section.has("totalPenalty"), name)
             assertFalse(section.has("formula"), name)
+            assertFalse(section.has("summary"), name)
         }
     }
 
